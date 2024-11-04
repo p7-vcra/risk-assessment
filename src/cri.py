@@ -2,9 +2,11 @@ import geopandas as gpd
 import numpy as np
 from sklearn.metrics.pairwise import haversine_distances
 
-#CPA (Closest point of approach) 
-#TCPA (Time to CPA) Estiamted time until target reaches CPA
-#DCPA (Distance at CPA) Distance between own ship and CPA  
+# CPA (Closest point of approach) 
+# TCPA (Time to CPA) Estiamted time until target reaches CPA
+# DCPA (Distance at CPA) Distance between own ship and CPA  
+
+# 
 
 def calc_cpa(own: gpd.GeoDataFrame, target: gpd.GeoDataFrame): 
     lon_delta = own["geometry"].x - target["geometry"].x
