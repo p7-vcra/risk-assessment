@@ -21,16 +21,16 @@ jobs:
 
     # Build the Podman image
     - name: Build the Podman image
-      run: podman build . --file Dockerfile --tag risk-assessment-$(date +%s)
+      run: podman build . --file Dockerfile --tag risk-assessment
 
     # Convert Podman image to Singularity image
     - name: Save the podman image as a tar file
       run: |
-        podman save risk-assessment-$(date +%s):latest -o risk-assessment-$(date +%s).tar
+        podman save risk-assessment:latest -o risk-assessment.tar
 
     # Upload Singularity image as an artifact
     - name: Upload Podman Image
       uses: actions/upload-artifact@v4
       with:
         name: podman-image
-        path: risk-assessment-$(date +%s).tar
+        path: risk-assessment.tar
