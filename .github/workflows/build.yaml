@@ -1,0 +1,42 @@
+name: Podman and Singularity CI
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    # Install Podman
+    - name: Install Podman
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y podman
+
+    # Install Singularity
+    - name: Install Singularity
+      run: |
+        sudo apt-get install -y singularity-container
+
+    # Build the Podman image
+    - name: Build the Podman image
+      run: podman build . --file Dockerfile --tag risk-assessment:$(date +%s)
+
+    # Convert Podman image to Singularity image
+    - name: Build the Singularity image
+      run: |
+        podman save risk-assessment:$(date +%s) -o ra.tar
+        singularity build risk-assessment.sif docker-archive://ra.tar
+
+    # Upload Singularity image as an artifact
+    - name: Upload Singularity Image
+      uses: actions/upload-artifact@v4
+      with:
+        name: singularity-image
+        path: risk-assessment.sif
