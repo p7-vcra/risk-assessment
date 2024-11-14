@@ -6,14 +6,14 @@ from sklearn.metrics.pairwise import haversine_distances
 # TCPA (Time to CPA) Estiamted time until target reaches CPA
 # DCPA (Distance at CPA) Distance between own ship and CPA  
 
-# 
+NMI_IN_KM = 1.852 # 1.852 is the length of a nautical mile in km
+EPS = 1e-9 # Epsilon value added to avoid division by zero
 
 def calc_cpa(own: gpd.GeoDataFrame, target: gpd.GeoDataFrame): 
     lon_delta = own["geometry"].x - target["geometry"].x
     lat_delta = own["geometry"].y - target["geometry"].y
 
-    # 1.852 is the length of a nautical mile in km
-    euclidian_dist = haversine_distances(own["geometry"], target["geometry"]) / 1.852
+    euclidian_dist = haversine_distances(own["geometry"], target["geometry"]) / NMI_IN_KM
 
     own_course_rad = np.deg2rad(own["course"])
     target_course_rad = np.deg2rad(target["course"])
@@ -37,17 +37,16 @@ def calc_cpa(own: gpd.GeoDataFrame, target: gpd.GeoDataFrame):
             "tcpa": tcpa
         }
 
-def calc_cri(own, target, euclidian_dist, rel_movement_direction, azimuth_target_to_own, rel_bearing, dcpa, tcpa, rel_speed_mag, weights=[0.4457, 0.2258, 0.1408, 0.1321, 0.055]):
-
+def calc_cri(own, target, euclidian_dist, rel_movement_direction, azimuth_target_to_own, rel_bearing, dcpa, tcpa, rel_speed_mag, weights=[0.4457, 0.2258, 0.1408, 0.1321, 0.0556]):
     result = np.nan
     
     d1, d2 = calc_safety_domain(azimuth_target_to_own)
     u_dcpa = cpa_membership(np.abs(dcpa), d1, d2)
 
-    t1, t2 = calc_collision_eta(d1, d2, dcpa, rel_speed_mag)
+    t1, t2 = calc_collision_eta(np.abs(dcpa), rel_speed_mag, d1, d2)
     u_tcpa = cpa_membership(np.abs(tcpa), t1, t2)
 
-    crit_safe_dist, avoidance_measure_dist = calc_crit_dist(own["length"] / 1.852, rel_bearing)
+    crit_safe_dist, avoidance_measure_dist = calc_crit_dist(own["length"] / NMI_IN_KM*1000, rel_bearing) # Length is in meters, so we convert it to nmi
     u_dist = cpa_membership(euclidian_dist, crit_safe_dist, avoidance_measure_dist)
 
     u_bearing = rel_bearing_membership(rel_bearing)
@@ -59,44 +58,42 @@ def calc_cri(own, target, euclidian_dist, rel_movement_direction, azimuth_target
     return result
 
 def cpa_membership(value, min, max):
-    result = np.nan
-
-    if 0 <= value <= max:
-        result = 1
+    if value <= min:
+        return 1
     elif min < value <= max:
-        result = np.power((max - value / max - min), 2)
-    elif value > max:
-        result = 0
-    
-    return result
+        return ((max - value) / (max - min)) ** 2
+    else:
+        return 0
 
-def calc_collision_eta(d1, d2, dcpa, rel_speed):
-    t1 = np.nan
+def calc_collision_eta(dcpa, rel_speed, d1, d2):
     if dcpa <= d1:
-        t1 = np.sqrt(np.power(d1, 2) - np.power(dcpa, 2) / rel_speed)
-    elif dcpa > d1:
-        t1 = d1 - dcpa / rel_speed
+        t1 = np.sqrt(d1 ** 2 - dcpa ** 2) / rel_speed
+    else:
+        t1 = (d1 - dcpa) / rel_speed
 
-    t2 = np.sqrt(np.power(d2, 2) - np.power(dcpa, 2) / rel_speed)
+    t2 = np.sqrt(d2 ** 2 - dcpa ** 2) / rel_speed
 
     return t1, t2
 
 def calc_crit_dist(own_length, rel_bearing):
     crit_safe_dist = own_length * 12
     angle = rel_bearing - np.deg2rad(19)
-    avoidance_measure_dist = 1.7 * np.cos(angle) + np.sqrt(4.3 + 2.89 * np.power(np.cos(angle), 2))
+    avoidance_measure_dist = 1.7 * np.cos(angle) + np.sqrt(4.4 + 2.89 * np.cos(angle) ** 2)
 
     return crit_safe_dist, avoidance_measure_dist
 
 def rel_bearing_membership(rel_bearing):
     angle = rel_bearing - np.deg2rad(19)
-    result = 1/2 * np.cos(angle) + np.sqrt(440/289 + np.power(np.cos(angle), 2)) - 5/17
+    result = 1/2 * (np.cos(angle) + np.sqrt(440/289 + np.cos(angle) ** 2)) - 5/17
     return result
 
 def speed_ratio_membership(own_speed, target_speed, rel_course):
     speed_ratio = target_speed / own_speed
-    result = 1 / (1 + (2 / speed_ratio * np.sqrt(np.power(speed_ratio, 2) + 1 + 2 * speed_ratio * np.sin(rel_course))))
-    return result
+
+    denom = speed_ratio * np.sqrt(speed_ratio ** 2 + 1 + 2 * speed_ratio * np.sin(rel_course)) + EPS
+    assert denom > 0, ValueError(f'Division by zero {speed_ratio=}, {rel_course=}, {denom=}')
+    
+    return 1/(1 + 2/denom)
 
 # def calc_safety_domain(azimuth_angle):
 #     azimuth_angle_deg = np.degrees(azimuth_angle)
