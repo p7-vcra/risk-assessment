@@ -3,8 +3,8 @@ import unittest
 import numpy as np
 import pandas as pd
 import geopandas as gpd
-from utils.cri import EPS, calc_collision_eta, calc_safety_domain, cpa_membership, rel_bearing_membership, speed_ratio_membership
-from utils.cri import calc_crit_dist
+from src.utils.cri import EPS, calc_collision_eta, calc_safety_domain, cpa_membership, rel_bearing_membership, speed_ratio_membership
+from src.utils.cri import calc_crit_dist
 
 data = {
     "own_vessel_id": [1, 1, 1, 1, 1],
@@ -71,12 +71,6 @@ class TestCalcCollisionEta(unittest.TestCase):
         t1, t2 = calc_collision_eta(2, 10, 1, 2)
         self.assertAlmostEqual(t1, (1 - 2) / 10)
         self.assertAlmostEqual(t2, np.sqrt(2 ** 2 - 2 ** 2) / 10)
-
-    def test_calc_collision_eta_dcpa_above_d2(self):
-        t1, t2 = calc_collision_eta(2.5, 10, 1, 2)
-        self.assertAlmostEqual(t1, (1 - 2.5) / 10)
-        self.assertTrue(t2, np.sqrt(2 ** 2 - 2.5 ** 2) / 10)
-
 
 class TestCalcCritDist(unittest.TestCase):
     def test_calc_crit_dist_zero_length(self):

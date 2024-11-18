@@ -1,7 +1,7 @@
 import unittest
 import pandas as pd
 import numpy as np
-from utils.encounters import pairs_in_radius
+from src.utils.encounters import pairs_in_radius
 
 class TestPairsInRadius(unittest.TestCase):
 
