@@ -7,7 +7,7 @@ import src.vessel_encounter as ve
 SRC_PATH = './data/RealData1MRows.csv'
 DISTANCE_THRESHOLD_IN_KM = 15
 TEMPORAL_THRESHOLD_IN_SECONDS = 1
-TIME_BETWEEN_EACH_DATA_SENT_IN_S = 1
+TIME_BETWEEN_EACH_DATA_SENT_IN_S = 0
 
 def main():
     # Run the data stream
