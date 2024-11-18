@@ -8,7 +8,7 @@ import tqdm
 from sklearn.neighbors import KDTree, BallTree
 from joblib import Parallel, delayed
 
-import utils.cri as cri
+import src.utils.cri as cri
 
 EPS = 1e-9
 

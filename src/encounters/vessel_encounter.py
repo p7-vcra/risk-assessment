@@ -4,8 +4,8 @@ import asyncio
 import numpy as np
 import pandas as pd
 import geopandas as gpd
-import src.helper as helper
-import src.data_util as du
+import src.encounters.helper as helper
+import src.utils.data_util as du
 
 RUN_UNTIL_TIMESTAMP = pd.to_datetime("2024-10-09 00:05:00")
 RUN_FROM_TIMESTAMP = pd.to_datetime("2024-10-09 00:00:00")

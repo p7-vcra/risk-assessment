@@ -2,7 +2,7 @@ import asyncio
 from cProfile import Profile
 from pstats import Stats
 import time
-import src.vessel_encounter as ve
+import src.encounters.vessel_encounter as ve
 
 SRC_PATH = './data/RealData1MRows.csv'
 DISTANCE_THRESHOLD_IN_KM = 15

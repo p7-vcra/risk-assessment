@@ -2,8 +2,8 @@ import os
 import sys
 import unittest
 import pandas as pd
-import src.helper as helper
-import src.data_util as data_utils
+import src.encounters.helper as helper
+import src.utils.data_util as data_utils
 
 
 class TestUpdatePairs(unittest.TestCase):

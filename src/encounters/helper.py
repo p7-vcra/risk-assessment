@@ -4,7 +4,7 @@ import geopandas as gpd
 import os
 import time 
 import itertools
-import src.data_util as data_utils
+import src.utils.data_util as data_utils
 from asyncio import sleep
 from datetime import datetime
 from geopy.distance import geodesic

@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 from sklearn.neighbors import BallTree
-import src.helper as helper
+import src.encounters.helper as helper
 
 class TestVesselPairsInRadius(unittest.TestCase):
 
