@@ -1,0 +1,13 @@
+beautifulsoup4
+geopandas
+joblib
+loguru
+numpy
+pandas
+Requests
+scikit_learn
+Shapely
+torch
+tqdm
+pyarrow
+pytest
