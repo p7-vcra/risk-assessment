@@ -1,5 +1,7 @@
+folium
 beautifulsoup4
 geopandas
+geopy
 joblib
 loguru
 numpy
