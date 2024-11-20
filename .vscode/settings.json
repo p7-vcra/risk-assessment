@@ -1,12 +1,11 @@
 {
     "python.testing.unittestArgs": [
-        "./tests/encounters",
         "-v",
         "-s",
         "./tests",
         "-p",
         "test_*.py",
     ],
-    "python.testing.unittestEnabled": true,
+    "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
 }

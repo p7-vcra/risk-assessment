@@ -4,7 +4,7 @@ import geopandas as gpd
 import os
 import time 
 import itertools
-import src.utils.data_util as data_utils
+import utils.data_util as data_utils
 import warnings
 from asyncio import sleep
 from datetime import datetime
