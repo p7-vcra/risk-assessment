@@ -9,20 +9,22 @@ from sklearn.metrics.pairwise import haversine_distances
 NMI_IN_KM = 1.852 # 1.852 is the length of a nautical mile in km
 EPS = 1e-9 # Epsilon value added to avoid division by zero
 
-def calc_cpa(own: gpd.GeoDataFrame, target: gpd.GeoDataFrame): 
-    lon_delta = own["geometry"].x - target["geometry"].x
-    lat_delta = own["geometry"].y - target["geometry"].y
+def calc_cpa(data): 
+    lon_delta = data['vessel_1_longitude'] - data['vessel_2_longitude']
+    lat_delta = data['vessel_1_latitude'] - data['vessel_2_latitude']
 
-    euclidian_dist = haversine_distances(own["geometry"], target["geometry"]) / NMI_IN_KM
+    vessel_1_xy = np.array([data['vessel_1_longitude'], data['vessel_1_latitude']]).reshape(1, -1)
+    vessel_2_xy = np.array([data['vessel_2_longitude'], data['vessel_2_latitude']]).reshape(1, -1)
 
-    own_course_rad = np.deg2rad(own["course"])
-    target_course_rad = np.deg2rad(target["course"])
+    euclidian_dist = haversine_distances(vessel_1_xy, vessel_2_xy) / NMI_IN_KM
 
-    rel_speed_x, rel_speed_y, rel_speed_mag = calc_rel_speed(own["speed"], own_course_rad, target["speed"], target_course_rad)
+    rel_speed_x, rel_speed_y, rel_speed_mag = calc_rel_speed(data["vessel_1_speed"], data["vessel_1_course_rad"],
+                                                             data["vessel_2_speed"], data["vessel_2_course_rad"])
+   
     rel_movement_direction = np.arctan2(rel_speed_x, rel_speed_y)
     azimuth_target_to_own = np.arctan2(lon_delta, lat_delta)
 
-    rel_bearing = azimuth_target_to_own - own["course"]
+    rel_bearing = azimuth_target_to_own - data["vessel_1_course_rad"]
 
     CPA_angle = rel_movement_direction - azimuth_target_to_own - np.pi
     dcpa = euclidian_dist * np.sin(CPA_angle)
@@ -30,6 +32,7 @@ def calc_cpa(own: gpd.GeoDataFrame, target: gpd.GeoDataFrame):
 
     return {
             "euclidian_dist": euclidian_dist,
+            "rel_speed_mag": rel_speed_mag,
             "rel_movement_direction": normalize_angle(rel_movement_direction),
             "azimuth_target_to_own": normalize_angle(azimuth_target_to_own),
             "rel_bearing": normalize_angle(rel_bearing),
@@ -37,7 +40,7 @@ def calc_cpa(own: gpd.GeoDataFrame, target: gpd.GeoDataFrame):
             "tcpa": tcpa
         }
 
-def calc_cri(own, target, euclidian_dist, rel_movement_direction, azimuth_target_to_own, rel_bearing, dcpa, tcpa, rel_speed_mag, weights=[0.4457, 0.2258, 0.1408, 0.1321, 0.0556]):
+def calc_cri(data, euclidian_dist, rel_movement_direction, azimuth_target_to_own, rel_bearing, dcpa, tcpa, rel_speed_mag, weights=[0.4457, 0.2258, 0.1408, 0.1321, 0.0556]):
     result = np.nan
     
     d1, d2 = calc_safety_domain(azimuth_target_to_own)
@@ -46,12 +49,12 @@ def calc_cri(own, target, euclidian_dist, rel_movement_direction, azimuth_target
     t1, t2 = calc_collision_eta(np.abs(dcpa), rel_speed_mag, d1, d2)
     u_tcpa = cpa_membership(np.abs(tcpa), t1, t2)
 
-    crit_safe_dist, avoidance_measure_dist = calc_crit_dist(own["length"] / NMI_IN_KM*1000, rel_bearing) # Length is in meters, so we convert it to nmi
+    crit_safe_dist, avoidance_measure_dist = calc_crit_dist(data["vessel_1_length"] / NMI_IN_KM*1000, rel_bearing) # Length is in meters, so we convert it to nmi
     u_dist = cpa_membership(euclidian_dist, crit_safe_dist, avoidance_measure_dist)
 
     u_bearing = rel_bearing_membership(rel_bearing)
 
-    u_speed = speed_ratio_membership(own["speed"], target["speed"], rel_movement_direction)
+    u_speed = speed_ratio_membership(data["vessel_1_speed"], data["vessel_2_speed"], rel_movement_direction)
 
     result = np.dot(weights, [u_dcpa, u_tcpa, u_dist, u_bearing, u_speed])
 
