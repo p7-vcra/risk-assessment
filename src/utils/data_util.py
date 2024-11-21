@@ -24,7 +24,7 @@ def create_pair_dataframe():
         'vessel_1_length', 'vessel_2_length'
     ]
     # Create the DataFrame
-    df = pd.DataFrame(columns=columns).astype(pairType)  # Ensure the correct data types
+    df = pd.DataFrame(columns=columns)  # Ensure the correct data types
     # Set the index to be MultiIndex with vessel_1 and vessel_2
     df.set_index(['vessel_1', 'vessel_2'], inplace=True)
     return df

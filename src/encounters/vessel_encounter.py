@@ -6,10 +6,7 @@ import geopandas as gpd
 import encounters.helper as helper
 import utils.data_util as du
 
-RUN_UNTIL_TIMESTAMP = pd.to_datetime("2024-10-09 00:05:00")
-RUN_FROM_TIMESTAMP = pd.to_datetime("2024-10-09 00:00:00")
-
-async def vessel_encounters(SRC_PATH, DISTANCE_THRESHOLD_IN_KM, TEMPORAL_THRESHOLD_IN_SECONDS, TIME_BETWEEN_EACH_DATA_SENT_IN_S, TIME_FOR_BATCHES_IN_S):
+async def vessel_encounters(SRC_PATH, DISTANCE_THRESHOLD_IN_KM, TEMPORAL_THRESHOLD_IN_SECONDS, TIME_FOR_BATCHES_IN_S, RUN_FROM_TIMESTAMP, RUN_UNTIL_TIMESTAMP):
     active_pairs = du.create_pair_dataframe()
     inactive_pairs = du.create_pair_dataframe()
     all_outputs = du.create_pair_dataframe()
@@ -19,7 +16,7 @@ async def vessel_encounters(SRC_PATH, DISTANCE_THRESHOLD_IN_KM, TEMPORAL_THRESHO
     last_batch_time = RUN_FROM_TIMESTAMP
 
     # Stream data asynchronously from CSV
-    async for data in helper.make_datastream_from_csv(SRC_PATH, s=TIME_BETWEEN_EACH_DATA_SENT_IN_S):
+    for data in helper.make_datastream_from_csv(SRC_PATH):
         timestamp = data['# Timestamp'].iloc[0]
         if timestamp < RUN_FROM_TIMESTAMP:
             continue
@@ -65,8 +62,6 @@ async def vessel_encounters(SRC_PATH, DISTANCE_THRESHOLD_IN_KM, TEMPORAL_THRESHO
         # Exit condition for debugging
         if timestamp == RUN_UNTIL_TIMESTAMP:
             break
-
-        await asyncio.sleep(TIME_BETWEEN_EACH_DATA_SENT_IN_S)
 
     # Final processing if there is leftover data in the batch
     if batch_data:

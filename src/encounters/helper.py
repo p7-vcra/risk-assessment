@@ -20,41 +20,44 @@ pd.set_option('display.max_rows', None)
 warnings.simplefilter(action='ignore', category=FutureWarning) # TODO: Figure out the futurewarnings for concatenation and remove this line
 
 def convert_gdf_from_deg_to_rad(gdf):
-    gdf[['Latitude', 'Longitude', 'course']] = np.deg2rad(gdf[['Latitude', 'Longitude', 'course']])
+    # Use numpy to directly assign converted values for better performance
+    radian_cols = ['Latitude', 'Longitude', 'course']
+    gdf[radian_cols] = np.radians(gdf[radian_cols])
     return gdf
 
 
-async def make_datastream_from_csv(path_to_file, s = 1):
-    '''Temporary function until server is setup to feed data'''
-
-    #TODO: Fix this pleaseeeeeee-> Converts twice-> no need to
-    df = pd.read_csv(path_to_file, parse_dates=['# Timestamp'])
-
-    gdf = gpd.GeoDataFrame(
-        df, 
-        crs=4326, # this is the crs for lat/lon
-        geometry=gpd.points_from_xy(df['Longitude'], df['Latitude'])
+def make_datastream_from_csv(path_to_file, s=1):
+    # Load only necessary columns and filter data in chunks
+    chunk_iter = pd.read_csv(
+        path_to_file,
+        parse_dates=['# Timestamp'],
+        usecols=['# Timestamp', 'MMSI', 'Longitude', 'Latitude', 'SOG', 'COG', 'Length'],
+        chunksize=100000  # Adjust chunk size based on memory capacity
     )
 
-    gdf.rename({'SOG':'speed', 'COG':'course'}, axis=1, inplace=True)
+    for chunk in chunk_iter:
+        # Apply speed filter early to minimize processing
+        chunk = chunk.loc[(chunk['SOG'] >= 1) & (chunk['SOG'] <= 50)]
 
-    # Drop rows with speed under 1 and speed over 50
+        # Create GeoDataFrame and process directly
+        chunk['geometry'] = gpd.points_from_xy(chunk['Longitude'], chunk['Latitude'])
+        gdf = gpd.GeoDataFrame(
+            chunk,
+            crs="EPSG:4326",  # Explicit CRS for clarity
+            geometry='geometry'
+        )
 
-    gdf = gdf.loc[gdf['speed'] >= 1 & (gdf['speed'] <= 50)]
+        # Rename columns and convert coordinates
+        gdf.rename(columns={'SOG': 'speed', 'COG': 'course'}, inplace=True)
+        gdf = convert_gdf_from_deg_to_rad(gdf)
 
-    gdf.reset_index(drop=True, inplace=True)
-
-    gdf = convert_gdf_from_deg_to_rad(gdf)
-
-    # while there are still timestamps to iterate over
-    for timestamp, group in gdf.groupby('# Timestamp'):
-        yield group
-        await sleep(s)
-    ("Finished streaming data")
-
+        # Stream data by timestamp
+        for timestamp, group in gdf.groupby('# Timestamp'):
+            yield group
 
 def vessel_encounters(timestamp, new_data, distance_threshold_in_km):
-    if new_data.empty:
+    # a fancy way to check if new_data is empty -> faster 
+    if new_data.shape[0] == 0:
         return data_utils.create_pair_dataframe()
 
     # Get current vessel pairs and their distances within the distance threshold
@@ -79,7 +82,8 @@ def get_vessel_pairs_in_radius(new_data, distance_threshold_in_km):
 
 
 def get_pairs(group_of_vessel, distances):
-    return list(zip(itertools.repeat(group_of_vessel[0]), group_of_vessel[1:], distances[1:])) # makes a list of pairs and their distances -> will look like [(0, 1, 1.23), (0, 2, 3.42),] 
+    # Optimize with list comprehension for better performance
+    return [(group_of_vessel[0], other_vessel, distance) for other_vessel, distance in zip(group_of_vessel[1:], distances[1:])]
 
 
 def get_vessels_in_radius(new_data, distance_threshold_in_km = 1.852):
@@ -98,33 +102,34 @@ def get_vessels_in_radius(new_data, distance_threshold_in_km = 1.852):
     mask = np.vectorize(lambda l: len(l) > 1)(points)
     return points[mask], distance[mask] * 6371
 
-# TODO - TEMP-> THIS ONE REMOVES THE DUPLICATE PAIRS (where MMSI is just flipped) - BUT WE MIGHT NEED THIS
 def get_MMSI_info_for_current_pairs(timestamp, pairs, new_data):
-    pairs_list = []
+    # Convert `new_data` to a dictionary for quick lookup
+    vessel_data = new_data.to_dict('index')
+
+    # Prepare lists for the final DataFrame columns
+    data_records = []
     seen_pairs = set()
 
-    # Cache the 'new_data' for efficiency
-    vessel_data = new_data.to_dict('index')  # Convert to dictionary of row data for quicker lookup
-
+    # Iterate over the pairs and build the records list
     for vessel_1, vessel_2, distance in pairs:
         mmsi_1 = vessel_data[vessel_1]['MMSI']
         mmsi_2 = vessel_data[vessel_2]['MMSI']
 
         if mmsi_1 != mmsi_2:
-            # Ensure the pair is always stored in a sorted order
+            # Sort MMSIs to maintain consistent pair order
             sorted_pair = tuple(sorted((mmsi_1, mmsi_2)))
 
-            # Check if the pair has already been added
+            # Skip if this pair has already been processed
             if sorted_pair not in seen_pairs:
-                # Extract relevant data once
+                # Fetch vessel data once
                 data_1 = vessel_data[vessel_1]
                 data_2 = vessel_data[vessel_2]
 
-                # Add the pair to the list
-                pairs_list.append({
+                # Add the record for this pair
+                data_records.append({
                     'vessel_1': sorted_pair[0],
                     'vessel_2': sorted_pair[1],
-                    'vessel_1_longitude': data_1['Longitude'],  
+                    'vessel_1_longitude': data_1['Longitude'],
                     'vessel_2_longitude': data_2['Longitude'],
                     'vessel_1_latitude': data_1['Latitude'],
                     'vessel_2_latitude': data_2['Latitude'],
@@ -138,22 +143,26 @@ def get_MMSI_info_for_current_pairs(timestamp, pairs, new_data):
                     'start_time': timestamp,
                     'end_time': timestamp
                 })
+
+                # Mark the pair as seen
                 seen_pairs.add(sorted_pair)
 
-    if not pairs_list:
+    # If no valid pairs were processed, return an empty DataFrame
+    if not data_records:
         return data_utils.create_pair_dataframe()
 
-    # Create the dataframe in one go
-    df_pairs = pd.DataFrame.from_records(pairs_list)
+    # Create a DataFrame from the collected records
+    df_pairs = pd.DataFrame.from_records(data_records)
 
-    # Create a multi-index from vessel_1 and vessel_2
+    # Set a MultiIndex for easier querying
     df_pairs.set_index(['vessel_1', 'vessel_2'], inplace=True)
 
-    # Ensure there are no duplicates
+    # Remove any accidental duplicates (shouldn't exist due to `seen_pairs`)
     df_pairs = df_pairs[~df_pairs.index.duplicated(keep='first')]
 
+    # Sanity check to ensure no duplicates exist
     assert not df_pairs.index.duplicated().any(), "Duplicate pairs found"
-    
+
     return df_pairs
 
 
@@ -177,56 +186,38 @@ def temp_output_to_file(pairs_out):
     pairs_out.to_csv(f"./output/output_{current_time}.txt", mode='w', header=True, index=True)
 
 def update_pairs(timestamp, active_pairs, current_pairs, temporal_threshold_in_seconds):
-    # Initialize DataFrames for survived, disappeared, and emerged pairs
-    survived = []
-    disappeared = []
-    
-    # Identify disappeared and emerged pairs
+    # Identify disappeared and emerged pairs using set operations
     disappeared_df = active_pairs.loc[~active_pairs.index.isin(current_pairs.index)]
     emerged_df = current_pairs.loc[~current_pairs.index.isin(active_pairs.index)]
 
-    # Filter active_pairs to only those also in current_pairs
-    common_indices = active_pairs.index.intersection(current_pairs.index)
-    active_common = active_pairs.loc[common_indices].copy()
-    current_common = current_pairs.loc[common_indices].copy()
+    # Merge active_pairs and current_pairs on indices to identify common pairs
+    common_pairs = active_pairs.merge(
+        current_pairs, how='inner', left_index=True, right_index=True, suffixes=('_active', '_current')
+    )
 
-    # Iterate over common indices to update distances and times
-    for pair_idx in common_indices:
-        pair_active = active_common.loc[pair_idx]
-        pair_current = current_common.loc[pair_idx]
+    # Identify survived and disappeared pairs among common indices
+    survived_mask = common_pairs['distance_current'] <= common_pairs['distance_active']
+    disappeared_mask = ~survived_mask
 
-        # If active pair's distance is less than current pair's, mark as disappeared
-        if pair_active['distance'] < pair_current['distance']:
-            disappeared.append(pair_active)
-        else:
-            # Update start_time directly in the current_pairs DataFrame
-            current_pairs.at[pair_idx, 'start_time'] = pair_active['start_time']
-            survived.append(current_pairs.loc[pair_idx])
+    # Survived pairs: Update start_time from active_pairs and set end_time to the current timestamp
+    survived_df = current_pairs.loc[common_pairs.loc[survived_mask].index]
+    survived_df['start_time'] = common_pairs.loc[survived_mask, 'start_time_active']
+    survived_df['end_time'] = timestamp
 
-    # Concatenate results for survived and disappeared pairs
-    survived_df = pd.DataFrame(survived, index=[pair.name for pair in survived]) if survived else data_utils.create_pair_dataframe()
-    disappeared_df = pd.concat([disappeared_df, pd.DataFrame(disappeared)]) if disappeared else disappeared_df
+    # Disappeared pairs: From active_pairs but did not survive
+    disappeared_pairs = active_pairs.loc[common_pairs.loc[disappeared_mask].index]
+    disappeared_df = pd.concat([disappeared_df, disappeared_pairs])
 
-    # Ensure correct data types
-    survived_df = survived_df.astype(data_utils.pairType)
-    disappeared_df = disappeared_df.astype(data_utils.pairType)
-
-    # Combine emerged and survived pairs to update active_pairs
-    updated_active_pairs = pd.concat([emerged_df, survived_df])
-
-    # Filter disappeared pairs to include only those exceeding the time threshold
-    threshold_exceeded = disappeared_df[
+    # Filter disappeared pairs for those exceeding the temporal threshold
+    disappeared_df = disappeared_df[
         (disappeared_df['end_time'] - disappeared_df['start_time']).dt.total_seconds() >= temporal_threshold_in_seconds
     ]
-    updated_inactive_pairs = threshold_exceeded
+
+    # Update active pairs with survived and emerged pairs
+    updated_active_pairs = pd.concat([emerged_df, survived_df])
 
     # Update the end_time of all active pairs to the current timestamp
     updated_active_pairs['end_time'] = timestamp
 
-    # Ensure correct data types
-    updated_active_pairs = updated_active_pairs.astype(data_utils.pairType)
-    updated_inactive_pairs = updated_inactive_pairs.astype(data_utils.pairType)
-
     # Return updated active and inactive pairs
-    return updated_active_pairs, updated_inactive_pairs
-
+    return updated_active_pairs, disappeared_df
