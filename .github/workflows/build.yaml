@@ -31,5 +31,7 @@ jobs:
       run: podman build . --file Dockerfile --tag risk-assessment:${{ github.sha }}
 
     - name: Push the Podman image
-      run: podman push risk-assessment ghcr.io/${{ github.repository }}/risk-assessment:latest
+      run: |
+        podman push risk-assessment ghcr.io/${{ github.repository }}/risk-assessment:${{ github.sha }}
+        podman push risk-assessment ghcr.io/${{ github.repository }}/risk-assessment:latest
 
