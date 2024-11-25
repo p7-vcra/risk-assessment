@@ -15,14 +15,14 @@ def filter_mmsi_data(file_path, mmsi_1, mmsi_2, start_timestamp):
     filtered_df = filtered_df[['# Timestamp', 'MMSI', 'Latitude', 'Longitude']]  # Keep only relevant columns
     return filtered_df
 
-file_path = "./data/RealData1MRows.csv"
+file_path = "./data/RealData.csv"
 
-mmsi_1 = "3638"  # Example MMSI
-mmsi_2 = "3638"  # Example MMSI
+mmsi_1 = "219002801"  # Example MMSI
+mmsi_2 = "219025528"  # Example MMSI
 start_timestamp = "10/09/2024 00:00:00"  # Example start timestamp
 
 result_df = filter_mmsi_data(file_path, mmsi_1, mmsi_2, start_timestamp)
-
+result_df.to_csv('filtered_mmsi_data_no_new_line.csv', index=False)
 if not result_df.empty:
     print("Finished! Resulting rows:", len(result_df))
     
