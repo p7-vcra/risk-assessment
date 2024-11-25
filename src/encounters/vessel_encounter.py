@@ -28,6 +28,7 @@ async def vessel_encounters(SRC_PATH, DISTANCE_THRESHOLD_IN_KM, TEMPORAL_THRESHO
         if (timestamp - last_batch_time).total_seconds() >= TIME_FOR_BATCHES_IN_S:
             # Concatenate all batch data for processing
             batch_df = pd.concat(batch_data, ignore_index=True)
+            batch_df = batch_df.drop_duplicates(subset='MMSI', keep='last', ignore_index=True)
 
             # Rename all timestamps in the batch to the start time of the batch
             batch_df['# Timestamp'] = last_batch_time
@@ -53,7 +54,6 @@ async def vessel_encounters(SRC_PATH, DISTANCE_THRESHOLD_IN_KM, TEMPORAL_THRESHO
 
             if not pairs_out.empty:
                 all_outputs = pd.concat([all_outputs, pairs_out])
-
             # Print progress message when a new minute starts
             if last_logged_minute is None or current_minute > last_logged_minute:
                 print(f"Current timestamp: {timestamp}")

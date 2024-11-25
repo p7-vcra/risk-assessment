@@ -12,7 +12,7 @@ from geopy.distance import geodesic
 from sklearn.neighbors import BallTree
 
 EPS = 1e-9
-MAX_NUMBER_OF_OUTPUT_FILES = 5
+MAX_NUMBER_OF_OUTPUT_FILES = 100
 assert MAX_NUMBER_OF_OUTPUT_FILES > 0, "MAX_NUMBER_OF_OUTPUT_FILES must be greater than 0"
 
 pd.set_option('display.max_rows', None)
@@ -38,6 +38,7 @@ def make_datastream_from_csv(path_to_file, s=1):
     for chunk in chunk_iter:
         # Apply speed filter early to minimize processing
         chunk = chunk.loc[(chunk['SOG'] >= 1) & (chunk['SOG'] <= 50)]
+        chunk = chunk.drop_duplicates(subset=['# Timestamp', 'MMSI'])
 
         # Create GeoDataFrame and process directly
         chunk['geometry'] = gpd.points_from_xy(chunk['Longitude'], chunk['Latitude'])
@@ -54,6 +55,7 @@ def make_datastream_from_csv(path_to_file, s=1):
         # Stream data by timestamp
         for timestamp, group in gdf.groupby('# Timestamp'):
             yield group
+
 
 def vessel_encounters(timestamp, new_data, distance_threshold_in_km):
     # a fancy way to check if new_data is empty -> faster 
@@ -157,9 +159,6 @@ def get_MMSI_info_for_current_pairs(timestamp, pairs, new_data):
     # Set a MultiIndex for easier querying
     df_pairs.set_index(['vessel_1', 'vessel_2'], inplace=True)
 
-    # Remove any accidental duplicates (shouldn't exist due to `seen_pairs`)
-    df_pairs = df_pairs[~df_pairs.index.duplicated(keep='first')]
-
     # Sanity check to ensure no duplicates exist
     assert not df_pairs.index.duplicated().any(), "Duplicate pairs found"
 
@@ -179,11 +178,18 @@ def temp_output_to_file(pairs_out):
         for i in range(len(files) - MAX_NUMBER_OF_OUTPUT_FILES + 1):
             os.remove(os.path.join(output_directory, files[i]))
 
+    pairs_out = pairs_out.reset_index()
+    pairs_out = pairs_out.drop_duplicates(subset=['vessel_1', 'vessel_2', 'start_time'], keep='last')
+    pairs_out = pairs_out.set_index(['vessel_1', 'vessel_2'])  # Restore the original index structure if needed
+
     #write to output file that 
     current_time = time.strftime("%Y%m%d-%H:%M:%S")
     print("Writing to output file at: ", current_time)
     pairs_out.index.names = ['vessel_1', 'vessel_2']
-    pairs_out.to_csv(f"./output/output_{current_time}.txt", mode='w', header=True, index=True)
+    #pairs_out.to_csv(f"./output/output_{current_time}.csv", mode='w', header=True, index=True)
+
+    pairs_out_cutdown = pairs_out[['distance', 'start_time', 'end_time']]
+    pairs_out_cutdown.to_csv(f"./output/output_{current_time}_cutdown.csv", mode='w', header=True, index=True)
 
 def update_pairs(timestamp, active_pairs, current_pairs, temporal_threshold_in_seconds):
     # Identify disappeared and emerged pairs using set operations

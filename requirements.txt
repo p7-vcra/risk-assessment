@@ -10,3 +10,5 @@ Shapely==2.0.6
 torch==2.5.1
 tqdm==4.67.0
 pytest==8.3.3
+seaborn
+matplotlib
