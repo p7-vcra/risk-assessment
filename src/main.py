@@ -5,11 +5,13 @@ import time
 import encounters.vessel_encounter as ve
 import pandas as pd
 
-SRC_PATH = './data/RealData1MRows.csv'
-DISTANCE_THRESHOLD_IN_KM = 15
-TEMPORAL_THRESHOLD_IN_SECONDS = 4
-TIME_FOR_BATCHES_IN_S = 2
-RUN_UNTIL_TIMESTAMP = pd.to_datetime("2024-10-09 00:05:00")
+SRC_PATH = './data/RealData.csv'
+#SRC_PATH = './data/RealData1MRows.csv'
+DISTANCE_THRESHOLD_IN_KM = 1
+TEMPORAL_THRESHOLD_IN_SECONDS = 180
+TIME_FOR_BATCHES_IN_S = 12
+#RUN_UNTIL_TIMESTAMP = pd.to_datetime("2024-10-09 00:30:00")
+RUN_UNTIL_TIMESTAMP = None
 RUN_FROM_TIMESTAMP = pd.to_datetime("2024-10-09 00:00:00")
 
 def main():
@@ -17,11 +19,11 @@ def main():
     asyncio.run(ve.vessel_encounters(SRC_PATH, DISTANCE_THRESHOLD_IN_KM, TEMPORAL_THRESHOLD_IN_SECONDS, TIME_FOR_BATCHES_IN_S, RUN_FROM_TIMESTAMP, RUN_UNTIL_TIMESTAMP))
 
 if __name__ == "__main__":
-    timestart = time.time()
-    main()
-    timeend = time.time()
-    print("Time taken: ", timeend - timestart)
-    quit()
+    # timestart = time.time()
+    # main()
+    # timeend = time.time()
+    # print("Time taken: ", timeend - timestart)
+    # quit()
     with Profile() as pr:
         main()
 

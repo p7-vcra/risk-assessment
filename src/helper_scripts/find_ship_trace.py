@@ -13,14 +13,13 @@ def filter_mmsi_data(file_path, mmsi_1, mmsi_2, start_timestamp):
     ]
     
     filtered_df = filtered_df[['# Timestamp', 'MMSI', 'Latitude', 'Longitude']]  # Keep only relevant columns
-
     return filtered_df
 
-file_path = "./data/testingCurrently.csv"
+file_path = "./data/RealData1MRows.csv"
 
-mmsi_1 = "277550000"  # Example MMSI
-mmsi_2 = "354537000"  # Example MMSI
-start_timestamp = "10/09/2024 00:03:00"  # Example start timestamp
+mmsi_1 = "3638"  # Example MMSI
+mmsi_2 = "3638"  # Example MMSI
+start_timestamp = "10/09/2024 00:00:00"  # Example start timestamp
 
 result_df = filter_mmsi_data(file_path, mmsi_1, mmsi_2, start_timestamp)
 

@@ -32,7 +32,7 @@ def make_datastream_from_csv(path_to_file, s=1):
         path_to_file,
         parse_dates=['# Timestamp'],
         usecols=['# Timestamp', 'MMSI', 'Longitude', 'Latitude', 'SOG', 'COG', 'Length'],
-        chunksize=100000  # Adjust chunk size based on memory capacity
+        chunksize=100000,  # Adjust chunk size based on memory capacity
     )
 
     for chunk in chunk_iter:
