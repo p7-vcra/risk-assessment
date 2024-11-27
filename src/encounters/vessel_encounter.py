@@ -25,7 +25,7 @@ def vessel_encounters(file_name):
     inactive_pairs = du.create_pair_dataframe()
     all_outputs = du.create_pair_dataframe()
     
-    last_logged_minute = None
+    last_logged_hour = None  # Track the last logged hour
     batch_data = []  # Buffer to store data for the batch
     last_batch_time = RUN_FROM_TIMESTAMP
 
@@ -53,7 +53,7 @@ def vessel_encounters(file_name):
             # Process the batch data
             pairs_out = du.create_pair_dataframe()
             current_pairs = helper.vessel_encounters(timestamp, batch_df, DISTANCE_THRESHOLD_IN_KM)
-            current_minute = timestamp.floor('min')  # Floor to the nearest minute
+            current_hour = timestamp.floor('H')  # Floor to the nearest hour
 
             if active_pairs.empty:  # Case 1: active_pairs is empty
                 active_pairs = current_pairs
@@ -68,10 +68,11 @@ def vessel_encounters(file_name):
 
             if not pairs_out.empty:
                 all_outputs = pd.concat([all_outputs, pairs_out])
-            # Print progress message when a new minute starts
-            if last_logged_minute is None or current_minute > last_logged_minute:
+            
+            # Log progress when a new hour starts
+            if last_logged_hour is None or current_hour > last_logged_hour:
                 logger.info(f"Current timestamp: {timestamp}")
-                last_logged_minute = current_minute
+                last_logged_hour = current_hour
 
         # Exit condition for debugging
         if timestamp == RUN_UNTIL_TIMESTAMP:

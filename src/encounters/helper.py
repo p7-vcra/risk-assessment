@@ -292,13 +292,13 @@ def get_AIS_data_file(url_name):
                     new_percent_complete = int((downloaded_size / total_size) * 100)
                     if new_percent_complete >= percent_complete + 10:
                         percent_complete = new_percent_complete
-                        logger.info(f"Download progress: {percent_complete}%")
+                        logger.info(f"Download progress: {percent_complete}% for {file_name}")
 
-        logger.info(f"\nFile downloaded: {file_path}")
+        logger.info(f"File downloaded: {file_path}")
 
         # Check and extract the file
         if zipfile.is_zipfile(file_path):
-            logger.info("Extracting ZIP file...")
+            logger.info("Extracting ZIP file... ")
             with zipfile.ZipFile(file_path, 'r') as zip_ref:
                 zip_ref.extractall(SRC_PATH)
             logger.info("ZIP file extracted successfully.")
