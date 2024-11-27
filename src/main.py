@@ -20,23 +20,27 @@ load_dotenv()
 logger = setup_logger(__name__) 
 
 # Constants
-PATH_TO_AIS_FILE = os.getenv('PATH_TO_AIS_FILE')
+AIS_FILE_NAME = os.getenv('AIS_FILE_NAME')
 NUMBER_OF_WORKERS = int(os.getenv('NUMBER_OF_WORKERS', 4))
 SRC_PATH = os.getenv('SRC_PATH')
 
-def main():
-    logger.info("Starting main processing...")
-    ve.vessel_encounters(PATH_TO_AIS_FILE)
 
-def get_training_data():
+def run_main_processing():
+    """Run the main vessel encounter processing."""
+    logger.info("Starting main processing...")
+    ve.vessel_encounters(AIS_FILE_NAME)
+
+
+def create_training_data():
+    """Create training data using AIS files."""
     logger.info("Creating training data...")
     AIS_data_info = helper.get_AIS_data_info()
-        
-    # Define a thread pool
+    total_files = len(AIS_data_info)
+    
     with ProcessPoolExecutor(max_workers=NUMBER_OF_WORKERS) as executor:
         futures = [
-            executor.submit(run_vessel_encounter_for_url, data)
-            for data in AIS_data_info
+            executor.submit(process_single_file, data, index + 1, total_files)
+            for index, data in enumerate(AIS_data_info)
         ]
         
         for future in asyncio.as_completed(futures):
@@ -45,41 +49,52 @@ def get_training_data():
             except Exception as e:
                 logger.error(f"Error during processing: {e}")
 
-def run_vessel_encounter_for_url(data):
-    logger.info(f"Running vessel encounter for date: {data['file_name']}")
+
+def process_single_file(data, current_index, total_files):
+    """Process a single AIS data file."""
+    logger.info(f"Processing file {current_index} out of {total_files}: {data['file_name']}")
     try:
         if helper.check_if_file_exists(data["file_name"]):
-            logger.info("File already processed")
+            logger.info(f"File {current_index} already processed: {data['file_name']}")
             return
         
         file_name_csv = helper.get_AIS_data_file(data["url"])
         ve.vessel_encounters(file_name_csv)
         file_path = os.path.join(SRC_PATH, file_name_csv)
         os.remove(file_path)
-        logger.info(f"Successfully processed and removed file: {data['file_name']}")
+        logger.info(f"Successfully processed and removed file {current_index} out of {total_files}: {data['file_name']}")
     except Exception as e:
-        logger.error(f"Error processing {data['file_name']}: {e}")
+        logger.error(f"Error processing file {current_index} out of {total_files}: {data['file_name']}, Error: {e}")
+
+
+def run_with_profiling():
+    """Run the main function with profiling."""
+    logger.info("Profiling enabled")
+    with Profile() as pr:
+        run_main_processing()
+    stats = Stats(pr).sort_stats("cumtime")
+    stats.print_stats(100, r"\((?!\_).*\)$")  # Exclude private and magic callables.
+
+
+def run_script(args):
+    """Run the script based on the parsed arguments."""
+    timestart = time.time()
+    
+    if args.profile:
+        run_with_profiling()
+    elif args.create_training_data:
+        create_training_data()
+    else:
+        run_main_processing()
+    
+    timeend = time.time()
+    logger.info(f"Total execution time: {timeend - timestart:.2f} seconds")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the risk assessment script with or without profiling.")
     parser.add_argument('--profile', action='store_true', help="Run with profiling")
     parser.add_argument('--create-training-data', action='store_true', help="Create training data for the ML model")
     args = parser.parse_args()
-
-    if args.profile:
-        logger.info("Profiling enabled")
-        with Profile() as pr:
-            main()
-        stats = Stats(pr).sort_stats("cumtime")
-        stats.print_stats(100, r"\((?!\_).*\)$")  # Exclude private and magic callables.
-    elif args.create_training_data:
-        timestart = time.time()
-        get_training_data()
-        timeend = time.time()
-        logger.info(f"Time taken to create training data: {timeend - timestart} seconds")
-    else:
-        timestart = time.time()
-        #main()
-        get_training_data()
-        timeend = time.time()
-        logger.info(f"Time taken for main processing: {timeend - timestart} seconds")
+    
+    run_script(args)
