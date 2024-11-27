@@ -77,7 +77,7 @@ class TestUpdatePairs(unittest.TestCase):
             timestamp, active_pairs, current_pairs, temporal_threshold_in_seconds=60
         )
 
-        pd.testing.assert_frame_equal(updated_active_pairs, expected_active_pairs)
+        pd.testing.assert_frame_equal(updated_active_pairs.astype(data_utils.pairType), expected_active_pairs)
         self.assertEqual(len(updated_inactive_pairs), 0)  # No pairs should be inactive
 
     def test_update_pairs_no_current_pairs(self):
@@ -124,8 +124,8 @@ class TestUpdatePairs(unittest.TestCase):
             timestamp, active_pairs, current_pairs, temporal_threshold_in_seconds=60
         )
 
-        pd.testing.assert_frame_equal(updated_active_pairs, expected_active_pairs)
-        pd.testing.assert_frame_equal(updated_inactive_pairs, expected_inactive_pairs)
+        pd.testing.assert_frame_equal(updated_active_pairs.astype(data_utils.pairType), expected_active_pairs)
+        pd.testing.assert_frame_equal(updated_inactive_pairs.astype(data_utils.pairType), expected_inactive_pairs)
 
     def test_update_pairs_with_no_distance_update(self):
         # Active pairs DataFrame
@@ -196,7 +196,7 @@ class TestUpdatePairs(unittest.TestCase):
             timestamp, active_pairs, current_pairs, temporal_threshold_in_seconds=60
         )
 
-        pd.testing.assert_frame_equal(updated_active_pairs, expected_active_pairs)
+        pd.testing.assert_frame_equal(updated_active_pairs.astype(data_utils.pairType), expected_active_pairs)
         self.assertEqual(len(updated_inactive_pairs), 0)  # No pairs should be inactive
 
     def test_update_pairs_with_temporal_threshold_exceeded(self):
@@ -269,7 +269,7 @@ class TestUpdatePairs(unittest.TestCase):
 
         #check that updated_Active_pairs is empty
         self.assertEqual(len(updated_active_pairs), 0)
-        pd.testing.assert_frame_equal(updated_inactive_pairs, expected_inactive_pairs)
+        pd.testing.assert_frame_equal(updated_inactive_pairs.astype(data_utils.pairType), expected_inactive_pairs)
 
 
     def test_update_pairs_with_temporal_threshold_not_exceeded(self):
@@ -338,5 +338,5 @@ class TestUpdatePairs(unittest.TestCase):
         updated_active_pairs = updated_active_pairs.reset_index(drop=True) # reset index due to weird mismatch between indexes
         updated_inactive_pairs = updated_inactive_pairs.reset_index(drop=True)
 
-        pd.testing.assert_frame_equal(updated_active_pairs, expected_active_pairs)
-        pd.testing.assert_frame_equal(updated_inactive_pairs, expected_inactive_pairs)
+        pd.testing.assert_frame_equal(updated_active_pairs.astype(data_utils.pairType), expected_active_pairs)
+        pd.testing.assert_frame_equal(updated_inactive_pairs.astype(data_utils.pairType), expected_inactive_pairs)
