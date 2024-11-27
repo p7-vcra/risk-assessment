@@ -17,7 +17,7 @@ RUN_UNTIL_TIMESTAMP = pd.to_datetime(os.getenv('RUN_UNTIL_TIMESTAMP'))
 RUN_FROM_TIMESTAMP = pd.to_datetime(os.getenv('RUN_FROM_TIMESTAMP'))
 
 
-def vessel_encounters(PATH_TO_AIS_FILE):
+def vessel_encounters(file_name):
     active_pairs = du.create_pair_dataframe()
     inactive_pairs = du.create_pair_dataframe()
     all_outputs = du.create_pair_dataframe()
@@ -27,7 +27,7 @@ def vessel_encounters(PATH_TO_AIS_FILE):
     last_batch_time = RUN_FROM_TIMESTAMP
 
     # Stream data asynchronously from CSV
-    for data in helper.make_datastream_from_csv(PATH_TO_AIS_FILE):
+    for data in helper.make_datastream_from_csv(file_name):
         timestamp = data['# Timestamp'].iloc[0]
         if timestamp < RUN_FROM_TIMESTAMP:
             continue
@@ -81,5 +81,4 @@ def vessel_encounters(PATH_TO_AIS_FILE):
         batch_df['# Timestamp'] = last_batch_time
         # Process remaining batch logic here if needed
 
-    helper.temp_output_to_file(all_outputs)
-    return all_outputs
+    helper.temp_output_to_file(PATH_TO_AIS_FILE, all_outputs)

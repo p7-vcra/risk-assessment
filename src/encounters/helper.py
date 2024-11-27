@@ -34,13 +34,16 @@ def convert_gdf_from_deg_to_rad(gdf):
     return gdf
 
 
-def make_datastream_from_csv(path_to_file, s=1):
+def make_datastream_from_csv(file_name):
+    path_to_file = os.path.join(SRC_PATH, file_name)
+    
     # Load only necessary columns and filter data in chunks
     chunk_iter = pd.read_csv(
         path_to_file,
         parse_dates=['# Timestamp'],
         usecols=['# Timestamp', 'MMSI', 'Longitude', 'Latitude', 'SOG', 'COG', 'Length'],
         chunksize=100000,  # Adjust chunk size based on memory capacity
+        dayfirst=True
     )
 
     for chunk in chunk_iter:
@@ -173,14 +176,9 @@ def get_MMSI_info_for_current_pairs(timestamp, pairs, new_data):
     return df_pairs
 
 
-def temp_output_to_file(pairs_out):
+def temp_output_to_file(file_name, pairs_out):
     if not os.path.exists(OUTPUT_DIRECTORY):
         os.makedirs(OUTPUT_DIRECTORY)
-
-    files = os.listdir(OUTPUT_DIRECTORY)
-    files.sort(key=lambda x: os.path.getmtime(os.path.join(OUTPUT_DIRECTORY, x)))
-    for i in range(len(files)):
-        os.remove(os.path.join(OUTPUT_DIRECTORY, files[i]))
 
     pairs_out = pairs_out.reset_index()
     pairs_out = pairs_out.drop_duplicates(subset=['vessel_1', 'vessel_2', 'start_time'], keep='last')
@@ -190,10 +188,7 @@ def temp_output_to_file(pairs_out):
     current_time = time.strftime("%Y%m%d-%H:%M:%S")
     print("Writing to output file at: ", current_time)
     pairs_out.index.names = ['vessel_1', 'vessel_2']
-    #pairs_out.to_csv(f"./output/output_{current_time}.csv", mode='w', header=True, index=True)
-
-    pairs_out_cutdown = pairs_out[['distance', 'start_time', 'end_time']]
-    pairs_out_cutdown.to_csv(f"./output/output_{current_time}_cutdown.csv", mode='w', header=True, index=True)
+    pairs_out.to_csv(f"./output/TC_{file_name}.csv", mode='w', header=True, index=True)
 
 def update_pairs(timestamp, active_pairs, current_pairs, temporal_threshold_in_seconds):
     # Identify disappeared and emerged pairs using set operations
@@ -261,6 +256,10 @@ def get_AIS_data_info():
 
 def get_AIS_data_file(url_name):
     try:
+        #if src folder doestn exist create it
+        if not os.path.exists(SRC_PATH):
+            os.makedirs(SRC_PATH)
+        
         print(f"Downloading AIS data file: {url_name}")
         response = requests.get(url_name, stream=True)
         response.raise_for_status()
@@ -268,10 +267,12 @@ def get_AIS_data_file(url_name):
         # Get file name from URL
         file_name = url_name.split('/')[-1]
         file_path = os.path.join(SRC_PATH, file_name)
+        file_path_csv = file_path.replace('.zip', '.csv').replace('.rar', '.csv')
+        file_name_csv = file_name.replace('.zip', '.csv').replace('.rar', '.csv')
 
-        if os.path.exists(file_path):
-            print(f"File already exists: {file_path}")
-            return
+        if os.path.exists(file_path_csv):
+            print(f"File already exists: {file_path_csv}")
+            return file_name_csv
 
         # Get the total file size from the headers
         total_size = int(response.headers.get('content-length', 0))
@@ -305,8 +306,12 @@ def get_AIS_data_file(url_name):
         
         # Optionally delete the archive after extraction
         os.remove(file_path)
-        return file_path
         print(f"Archive file {file_name} has been removed.")
+        return file_name_csv
 
     except Exception as e:
         print(f"Failed to download or extract AIS data file. Error: {e}")
+
+def check_if_file_exists(file_name):
+    file_path_csv = os.path.join(OUTPUT_DIRECTORY, file_name.replace('.zip', '.csv').replace('.rar', '.csv'))
+    return os.path.exists(file_path_csv)

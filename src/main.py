@@ -22,8 +22,7 @@ def main():
 def get_training_data():
     # start with threads 
     AIS_data_info = helper.get_AIS_data_info()
-    print("air", AIS_data_info)
-    
+        
     # Define a thread pool
     with ProcessPoolExecutor(max_workers=NUMBER_OF_WORKERS) as executor:
         # Submit tasks to the executor for each file name
@@ -42,9 +41,15 @@ def get_training_data():
 def run_vessel_encounter_for_url(data):
     print("Running vessel encounter for date: ", data["file_name"])
     try:
-        file_path = helper.get_AIS_data_file(data["url"])
-        ve.vessel_encounters(file_path)
-        os.remove(file_path)
+        #check if the file is already downloaded and processed
+        if helper.check_if_file_exists(data["file_name"]):
+            print("File already processed")
+            return
+        
+        file_name_csv = helper.get_AIS_data_file(data["url"])
+        ve.vessel_encounters(file_name_csv)
+        #os.remove(file_path)
+        quit()
     except Exception as e:
         print("Error: ", e)
 
