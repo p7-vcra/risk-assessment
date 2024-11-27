@@ -7,8 +7,11 @@ import geopandas as gpd
 import encounters.helper as helper
 import utils.data_util as du
 from dotenv import load_dotenv
+from utils.logger import setup_logger
 
 load_dotenv()
+
+logger = setup_logger(__name__) 
 
 DISTANCE_THRESHOLD_IN_KM = int(os.getenv('DISTANCE_THRESHOLD_IN_KM', 1))
 TEMPORAL_THRESHOLD_IN_SECONDS = int(os.getenv('TEMPORAL_THRESHOLD_IN_SECONDS', 30))
@@ -67,7 +70,7 @@ def vessel_encounters(file_name):
                 all_outputs = pd.concat([all_outputs, pairs_out])
             # Print progress message when a new minute starts
             if last_logged_minute is None or current_minute > last_logged_minute:
-                print(f"Current timestamp: {timestamp}")
+                logger.info(f"Current timestamp: {timestamp}")
                 last_logged_minute = current_minute
 
         # Exit condition for debugging
@@ -81,4 +84,4 @@ def vessel_encounters(file_name):
         batch_df['# Timestamp'] = last_batch_time
         # Process remaining batch logic here if needed
 
-    helper.temp_output_to_file(PATH_TO_AIS_FILE, all_outputs)
+    helper.temp_output_to_file(file_name, all_outputs)
