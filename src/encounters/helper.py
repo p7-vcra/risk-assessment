@@ -305,6 +305,7 @@ def get_AIS_data_file(url_name):
         
         # Optionally delete the archive after extraction
         os.remove(file_path)
+        return file_path
         print(f"Archive file {file_name} has been removed.")
 
     except Exception as e:

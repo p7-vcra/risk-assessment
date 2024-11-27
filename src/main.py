@@ -42,9 +42,9 @@ def get_training_data():
 def run_vessel_encounter_for_url(data):
     print("Running vessel encounter for date: ", data["file_name"])
     try:
-        helper.get_AIS_data_file(data["url"])
-        print(SRC_PATH + data["file_name"])
-        ve.vessel_encounters(SRC_PATH + data["file_name"])
+        file_path = helper.get_AIS_data_file(data["url"])
+        ve.vessel_encounters(file_path)
+        os.remove(file_path)
     except Exception as e:
         print("Error: ", e)
 

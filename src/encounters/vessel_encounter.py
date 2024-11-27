@@ -13,8 +13,8 @@ load_dotenv()
 DISTANCE_THRESHOLD_IN_KM = int(os.getenv('DISTANCE_THRESHOLD_IN_KM', 1))
 TEMPORAL_THRESHOLD_IN_SECONDS = int(os.getenv('TEMPORAL_THRESHOLD_IN_SECONDS', 30))
 TIME_FOR_BATCHES_IN_S = int(os.getenv('TIME_FOR_BATCHES_IN_S', 12))
-RUN_UNTIL_TIMESTAMP = pd.to_datetime(os.getenv('RUN_UNTIL_TIMESTAMP', "9999-12-31 23:59:59"))
-RUN_FROM_TIMESTAMP = pd.to_datetime(os.getenv('RUN_FROM_TIMESTAMP', "1000-01-01 00:00:00"))
+RUN_UNTIL_TIMESTAMP = pd.to_datetime(os.getenv('RUN_UNTIL_TIMESTAMP'))
+RUN_FROM_TIMESTAMP = pd.to_datetime(os.getenv('RUN_FROM_TIMESTAMP'))
 
 
 def vessel_encounters(PATH_TO_AIS_FILE):
