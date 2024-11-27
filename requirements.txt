@@ -17,3 +17,4 @@ python-dotenv
 pyarrow
 ipykernel
 beautifulsoup4
+rarfile

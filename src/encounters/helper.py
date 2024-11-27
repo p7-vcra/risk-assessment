@@ -6,16 +6,22 @@ import time
 import itertools
 import utils.data_util as data_utils
 import warnings
+import requests
+import zipfile
+import rarfile
 from asyncio import sleep
 from datetime import datetime
 from geopy.distance import geodesic
 from sklearn.neighbors import BallTree
 from dotenv import load_dotenv
+from bs4 import BeautifulSoup
 
 load_dotenv()
 
 EPS = 1e-9
 OUTPUT_DIRECTORY = os.getenv('OUTPUT_DIRECTORY', './output')
+SRC_PATH = os.getenv('SRC_PATH', './data')
+AIS_DATA_URL = os.getenv('AIS_DATA_URL', 'http://web.ais.dk/aisdata/')
 
 #pd.set_option('display.max_rows', None)
 #pd.set_option('display.max_columns', None)
@@ -225,3 +231,81 @@ def update_pairs(timestamp, active_pairs, current_pairs, temporal_threshold_in_s
 
     # Return updated active and inactive pairs
     return updated_active_pairs, disappeared_df
+
+
+def get_AIS_data_info():
+    try:
+        print(f"Downloading AIS data from {AIS_DATA_URL}")
+        response = requests.get(AIS_DATA_URL)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        table = soup.find('table')
+        rows = table.find_all('tr')[4:]  # Skip the first 4 rows
+        data = []
+        for row in rows[:-1]:  # Skip the last row
+            cols = row.find_all('td')
+            if len(cols) >= 4:
+                entry = {
+                    'file_name': cols[1].text.strip(),
+                    'url': AIS_DATA_URL + cols[1].text.strip(),
+                    'size': cols[3].text.strip()
+                }
+            data.append(entry)
+        data.reverse()
+        return data
+
+    except Exception as e:
+        print(f"Failed to download AIS data. Please check the URL and try again. Error: {e}")
+        return
+
+def get_AIS_data_file(url_name):
+    try:
+        print(f"Downloading AIS data file: {url_name}")
+        response = requests.get(url_name, stream=True)
+        response.raise_for_status()
+
+        # Get file name from URL
+        file_name = url_name.split('/')[-1]
+        file_path = os.path.join(SRC_PATH, file_name)
+
+        if os.path.exists(file_path):
+            print(f"File already exists: {file_path}")
+            return
+
+        # Get the total file size from the headers
+        total_size = int(response.headers.get('content-length', 0))
+        print(f"Total file size: {total_size / (1024 * 1024):.2f} MB")
+
+        # Save the downloaded file with progress
+        with open(file_path, 'wb') as f:
+            downloaded_size = 0
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+                    downloaded_size += len(chunk)
+                    done = int(50 * downloaded_size / total_size)
+                    print(f"\r[{'=' * done}{' ' * (50 - done)}] {downloaded_size / (1024 * 1024):.2f} MB", end='')
+
+        print(f"\nFile downloaded: {file_path}")
+
+        # Check and extract the file
+        if zipfile.is_zipfile(file_path):
+            print("Extracting ZIP file...")
+            with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                zip_ref.extractall(SRC_PATH)
+            print("ZIP file extracted successfully.")
+        elif rarfile.is_rarfile(file_path):
+            print("Extracting RAR file...")
+            with rarfile.RarFile(file_path, 'r') as rar_ref:
+                rar_ref.extractall(SRC_PATH)
+            print("RAR file extracted successfully.")
+        else:
+            print("The downloaded file is neither a ZIP nor a RAR file.")
+        
+        # Optionally delete the archive after extraction
+        os.remove(file_path)
+        print(f"Archive file {file_name} has been removed.")
+
+    except Exception as e:
+        print(f"Failed to download or extract AIS data file. Error: {e}")

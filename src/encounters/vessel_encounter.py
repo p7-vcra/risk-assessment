@@ -1,12 +1,23 @@
 import time
 import asyncio
+import os
 import numpy as np
 import pandas as pd
 import geopandas as gpd
 import encounters.helper as helper
 import utils.data_util as du
+from dotenv import load_dotenv
 
-async def vessel_encounters(SRC_PATH, DISTANCE_THRESHOLD_IN_KM, TEMPORAL_THRESHOLD_IN_SECONDS, TIME_FOR_BATCHES_IN_S, RUN_FROM_TIMESTAMP, RUN_UNTIL_TIMESTAMP):
+load_dotenv()
+
+DISTANCE_THRESHOLD_IN_KM = int(os.getenv('DISTANCE_THRESHOLD_IN_KM', 1))
+TEMPORAL_THRESHOLD_IN_SECONDS = int(os.getenv('TEMPORAL_THRESHOLD_IN_SECONDS', 30))
+TIME_FOR_BATCHES_IN_S = int(os.getenv('TIME_FOR_BATCHES_IN_S', 12))
+RUN_UNTIL_TIMESTAMP = pd.to_datetime(os.getenv('RUN_UNTIL_TIMESTAMP', "9999-12-31 23:59:59"))
+RUN_FROM_TIMESTAMP = pd.to_datetime(os.getenv('RUN_FROM_TIMESTAMP', "1000-01-01 00:00:00"))
+
+
+def vessel_encounters(PATH_TO_AIS_FILE):
     active_pairs = du.create_pair_dataframe()
     inactive_pairs = du.create_pair_dataframe()
     all_outputs = du.create_pair_dataframe()
@@ -16,7 +27,7 @@ async def vessel_encounters(SRC_PATH, DISTANCE_THRESHOLD_IN_KM, TEMPORAL_THRESHO
     last_batch_time = RUN_FROM_TIMESTAMP
 
     # Stream data asynchronously from CSV
-    for data in helper.make_datastream_from_csv(SRC_PATH):
+    for data in helper.make_datastream_from_csv(PATH_TO_AIS_FILE):
         timestamp = data['# Timestamp'].iloc[0]
         if timestamp < RUN_FROM_TIMESTAMP:
             continue
