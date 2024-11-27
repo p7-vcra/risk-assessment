@@ -10,12 +10,14 @@ from asyncio import sleep
 from datetime import datetime
 from geopy.distance import geodesic
 from sklearn.neighbors import BallTree
+from dotenv import load_dotenv
+
+load_dotenv()
 
 EPS = 1e-9
-MAX_NUMBER_OF_OUTPUT_FILES = 100
-assert MAX_NUMBER_OF_OUTPUT_FILES > 0, "MAX_NUMBER_OF_OUTPUT_FILES must be greater than 0"
+OUTPUT_DIRECTORY = os.getenv('OUTPUT_DIRECTORY', './output')
 
-pd.set_option('display.max_rows', None)
+#pd.set_option('display.max_rows', None)
 #pd.set_option('display.max_columns', None)
 warnings.simplefilter(action='ignore', category=FutureWarning) # TODO: Figure out the futurewarnings for concatenation and remove this line
 
@@ -166,17 +168,13 @@ def get_MMSI_info_for_current_pairs(timestamp, pairs, new_data):
 
 
 def temp_output_to_file(pairs_out):
-    output_directory = "./output"
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
+    if not os.path.exists(OUTPUT_DIRECTORY):
+        os.makedirs(OUTPUT_DIRECTORY)
 
-    #check if more than 5 files in output directory
-    files = os.listdir(output_directory)
-    if len(files) > MAX_NUMBER_OF_OUTPUT_FILES:
-        #remove the oldest files until there are only 5 files
-        files.sort(key=lambda x: os.path.getmtime(os.path.join(output_directory, x)))
-        for i in range(len(files) - MAX_NUMBER_OF_OUTPUT_FILES + 1):
-            os.remove(os.path.join(output_directory, files[i]))
+    files = os.listdir(OUTPUT_DIRECTORY)
+    files.sort(key=lambda x: os.path.getmtime(os.path.join(OUTPUT_DIRECTORY, x)))
+    for i in range(len(files)):
+        os.remove(os.path.join(OUTPUT_DIRECTORY, files[i]))
 
     pairs_out = pairs_out.reset_index()
     pairs_out = pairs_out.drop_duplicates(subset=['vessel_1', 'vessel_2', 'start_time'], keep='last')
