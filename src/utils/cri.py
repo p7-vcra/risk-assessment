@@ -145,7 +145,6 @@ def normalize_angle(angle):
 
 def calc_rel_speed(own_speed, own_course, target_speed, target_course):
     # Course should be in radians. If we are larger than 2 * pi we assume we are in degrees
-    logger.debug(f"own_course: {own_course}, target_course: {target_course}")
     if own_course >= 2 * np.pi:
         raise ValueError(f'Invalid own_course: {own_course}. It should be in radians.')
     if target_course >= 2 * np.pi:

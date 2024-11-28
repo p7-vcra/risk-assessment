@@ -12,9 +12,15 @@ def calc_vessel_cri(data):
     rel_movement_direction = []
     azimuth_target_to_own = []
 
-    # drop rows with missing values and print number of dropped rows
-    logger.info(f"Dropped {len(data) - len(data.dropna())} rows with missing values")
-    data.dropna(inplace=True)
+    # Drop rows with missing values
+    new_data = data.dropna()
+    logger.info(f"Dropped {len(data) - len(new_data)} rows with missing values")
+    data = new_data
+
+    # Drop rows where the vessel speed and course are identical
+    new_data = data.drop(data[(data['vessel_1_speed'] == data['vessel_2_speed']) & (data['vessel_1_course'] == data['vessel_2_course'])].index)
+    logger.info(f"Dropped {len(data) - len(new_data)} rows with identical vessel speed and course")
+    data = new_data
 
     for idx, row in data.iterrows():
         cpa = calc_cpa(row)
@@ -72,7 +78,6 @@ def process_and_save_cri(start_date, end_date, data_directory, output_file):
                 logger.error(f"Error processing {filepath}: {e} {traceback.format_exc()}")
         else:
             logger.warning(f"File not found: {filepath}")
-        exit(0) # TODO: Remove when done testing
 
     if results:
         # Concatenate all processed DataFrames and save to a single feather file
@@ -91,5 +96,5 @@ def run(data_directory):
 
     # Output feather file path
     output_file = 'training_data_combined.feather'
-    
+
     process_and_save_cri(start_date, end_date, data_directory, output_file)
