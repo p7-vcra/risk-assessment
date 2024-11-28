@@ -7,10 +7,14 @@ from loguru import logger
 from utils.cri import calc_cpa, calc_cri
 
 def calc_vessel_cri(data):
-    cri_values = []  # List to store CRI values
-    euclidean_distance = []  # List for euclidean_distance
-    rel_movement_direction = []  # List for rel_movement_direction
-    azimuth_target_to_own = []  # List for azimuth_target_to_own
+    cri_values = [] 
+    euclidean_distance = []
+    rel_movement_direction = []
+    azimuth_target_to_own = []
+
+    # drop rows with missing values and print number of dropped rows
+    logger.info(f"Dropped {len(data) - len(data.dropna())} rows with missing values")
+    data.dropna(inplace=True)
 
     for idx, row in data.iterrows():
         cpa = calc_cpa(row)
@@ -87,5 +91,5 @@ def run(data_directory):
 
     # Output feather file path
     output_file = 'training_data_combined.feather'
-
+    
     process_and_save_cri(start_date, end_date, data_directory, output_file)
