@@ -154,3 +154,8 @@ settings.json
 
 # Checkpoints
 /checkpoints
+
+# VS Code
+.vscode/*     
+!.vscode/settings.json
+!.vscode/launch.json

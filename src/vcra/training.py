@@ -9,7 +9,7 @@ import argparse
 from sklearn.metrics import mean_absolute_error, root_mean_squared_error, root_mean_squared_log_error
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.preprocessing import StandardScaler
-from model import MLP
+from vcra.model import MLP
 from loguru import logger
 import matplotlib.pyplot as plt
 
@@ -145,14 +145,7 @@ def generate_sample_data(num_samples=1000):
     return X_data, y_data, y_bin_data
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Train MLP VCRA model')
-    parser.add_argument('--use-checkpoint', '-uc', action='store_true', help='Flag to use checkpoint for resuming training')
-    parser.add_argument('--sample-data', '-sd', type=int, help='Number of sample data points to generate for training')
-    args = parser.parse_args()
-
-    logger.add("logs/risk-assessment-{time:YYYYMMDD}.log", rotation="00:00")
-    
+def run(use_checkpoint, sample_data):    
     device = (
         "cuda"
         if torch.cuda.is_available()
@@ -162,10 +155,10 @@ if __name__ == "__main__":
     )
     logger.info(f"Using {device} device")
 
-    if args.sample_data:
-        X_sub, y_sub, y_bin_sub = generate_sample_data(num_samples=args.sample_data)
+    if sample_data:
+        X_sub, y_sub, y_bin_sub = generate_sample_data(num_samples=sample_data)
     else:
-        data = pd.read_csv("data/training_data.csv")
+        data = pd.read_csv("data/training_aisdk.csv")
         data.loc[:, 'ves_cri_bin'] = pd.cut(
             data.ves_cri, bins=np.arange(0, 1.1, .2),
             right=True, include_lowest=True
@@ -175,11 +168,11 @@ if __name__ == "__main__":
         logger.info(ves_cri_bin_val_counts)
         ax = ves_cri_bin_val_counts.plot.bar()
         # ax.set_yscale('log') # Uncomment to use logarithmic scale
-        plt.savefig('data/training_data.ves_cri.distribution.pdf', dpi=300)
+        plt.savefig('data/training_aisdk.ves_cri.distribution.pdf', dpi=300)
 
         # %% Get a Stratified Subset (to ensure a "fair" comparison)
         X, y, y_bin = data.iloc[:, :-2], data.iloc[:, -2], data.iloc[:, -1].astype('str')
         X_sub, _, y_sub, _, y_bin_sub, _ = train_test_split(X, y, y_bin, train_size=0.35, random_state=10, stratify=y_bin)
     
     # Train the model with sample data
-    train_mlp_vcra(X_sub, y_sub, y_bin_sub, device=device, epochs=10, use_checkpoint=args.use_checkpoint)
+    train_mlp_vcra(X_sub, y_sub, y_bin_sub, device=device, epochs=10, use_checkpoint=use_checkpoint)

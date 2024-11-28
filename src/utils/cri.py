@@ -1,10 +1,14 @@
 import geopandas as gpd
 import numpy as np
+
+from loguru import logger
 from sklearn.metrics.pairwise import haversine_distances
 
 # CPA (Closest point of approach) 
 # TCPA (Time to CPA) Estiamted time until target reaches CPA
 # DCPA (Distance at CPA) Distance between own ship and CPA  
+
+# vessel_1_course and vessel_2_course are in radians
 
 NMI_IN_KM = 1.852 # 1.852 is the length of a nautical mile in km
 EPS = 1e-9 # Epsilon value added to avoid division by zero
@@ -18,13 +22,13 @@ def calc_cpa(data):
 
     euclidian_dist = haversine_distances(vessel_1_xy, vessel_2_xy) / NMI_IN_KM
 
-    rel_speed_x, rel_speed_y, rel_speed_mag = calc_rel_speed(data["vessel_1_speed"], data["vessel_1_course_rad"],
-                                                             data["vessel_2_speed"], data["vessel_2_course_rad"])
+    rel_speed_x, rel_speed_y, rel_speed_mag = calc_rel_speed(data["vessel_1_speed"], data["vessel_1_course"],
+                                                             data["vessel_2_speed"], data["vessel_2_course"])
    
     rel_movement_direction = np.arctan2(rel_speed_x, rel_speed_y)
     azimuth_target_to_own = np.arctan2(lon_delta, lat_delta)
 
-    rel_bearing = azimuth_target_to_own - data["vessel_1_course_rad"]
+    rel_bearing = azimuth_target_to_own - data["vessel_1_course"]
 
     CPA_angle = rel_movement_direction - azimuth_target_to_own - np.pi
     dcpa = euclidian_dist * np.sin(CPA_angle)
@@ -94,7 +98,9 @@ def speed_ratio_membership(own_speed, target_speed, rel_course):
     speed_ratio = target_speed / own_speed
 
     denom = speed_ratio * np.sqrt(speed_ratio ** 2 + 1 + 2 * speed_ratio * np.sin(rel_course)) + EPS
-    assert denom > 0, ValueError(f'Division by zero {speed_ratio=}, {rel_course=}, {denom=}')
+    
+    if denom <= 0:
+        raise ValueError(f'Division by zero {speed_ratio=}, {rel_course=}, {denom=}')
     
     return 1/(1 + 2/denom)
 
@@ -139,7 +145,12 @@ def normalize_angle(angle):
 
 def calc_rel_speed(own_speed, own_course, target_speed, target_course):
     # Course should be in radians. If we are larger than 2 * pi we assume we are in degrees
-    assert (target_course < 2 * np.pi) and (own_course < 2 * np.pi) 
+    logger.debug(f"own_course: {own_course}, target_course: {target_course}")
+    if own_course >= 2 * np.pi:
+        raise ValueError(f'Invalid own_course: {own_course}. It should be in radians.')
+    if target_course >= 2 * np.pi:
+        raise ValueError(f'Invalid target_course: {target_course}. It should be in radians.')
+
     rel_speed_x = target_speed * np.sin(target_course) - own_speed * np.sin(own_course)
     rel_speed_y = target_speed * np.cos(target_course) - own_speed * np.cos(own_course)
     rel_speed_mag = np.linalg.norm([rel_speed_x, rel_speed_y])
