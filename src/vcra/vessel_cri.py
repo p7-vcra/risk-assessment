@@ -95,6 +95,6 @@ def run(data_directory):
     end_date = datetime(2024, 11, 24).date()
 
     # Output feather file path
-    output_file = 'training_data_combined.feather'
+    output_file = f'training_data_combined_{start_date}_{end_date}.feather'
 
     process_and_save_cri(start_date, end_date, data_directory, output_file)
