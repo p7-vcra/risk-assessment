@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 import time
 import encounters.vessel_encounter as ve
 import pandas as pd
@@ -12,6 +13,8 @@ from loguru import logger
 from dotenv import load_dotenv
 
 load_dotenv()
+
+DATA_DIR = os.getenv('DATA_DIR')
 
 def run_encounters():
     src_path = os.getenv('SRC_PATH')
@@ -67,8 +70,11 @@ def main():
         logger.info("Running VCRA model training...")
         training.run(args.use_checkpoint, args.sample_data)
     elif args.action == 'cri':
+        start_date = pd.to_datetime(os.getenv('CRI_START_DATE')).date()
+        end_date = pd.to_datetime(os.getenv('CRI_END_DATE')).date()
+        
         logger.info("Running CRI calculations for data...")
-        vessel_cri.run("data/training_data_encounters")
+        vessel_cri.run(DATA_DIR, start_date, end_date)
 
 
 if __name__ == "__main__":

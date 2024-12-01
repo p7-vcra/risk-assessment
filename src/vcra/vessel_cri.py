@@ -52,22 +52,22 @@ def calc_vessel_cri(data):
     return data
 
 
-def generate_file_paths(start_date, end_date, data_directory='.'):
+def generate_file_paths(data_dir, start_date, end_date):
     """A generator to yield existing file paths for each date in the range."""
     current_date = start_date
     while current_date <= end_date:
         filename = f"TC_aisdk-{current_date}.csv"
-        filepath = os.path.join(data_directory, filename)
+        filepath = os.path.join(f"{data_dir}/training_data_encounters", filename)
         if os.path.exists(filepath):
             yield filepath
         current_date += timedelta(days=1)
 
 
-def process_and_save_cri(start_date, end_date, data_directory, output_file):
+def process_and_save_cri(data_dir, start_date, end_date):
     """Process multiple CSV files, calculate CRI values, and save results to a feather file."""
     results = []  # List to store processed DataFrames
 
-    for filepath in generate_file_paths(start_date, end_date, data_directory):
+    for filepath in generate_file_paths(data_dir, start_date, end_date):
         if os.path.exists(filepath):
             logger.info(f"Processing file: {filepath}")
             try:
@@ -81,20 +81,15 @@ def process_and_save_cri(start_date, end_date, data_directory, output_file):
 
     if results:
         # Concatenate all processed DataFrames and save to a single feather file
+        output_file = os.path.join(data_dir, f'training_aisdk_{start_date}_{end_date}.csv')
         combined_data = pd.concat(results, ignore_index=True)
-        combined_data.to_feather(output_file)
+        combined_data.to_csv(output_file)
         logger.info(f"All data saved to {output_file}")
     else:
         logger.warning("No data to save.")
 
 
-def run(data_directory):
+def run(data_dir, start_date, end_date):
     logger.info("Calculating CRI for the training data...")
-    # Define the start and end dates
-    start_date = datetime(2024, 10, 22).date()
-    end_date = datetime(2024, 11, 24).date()
 
-    # Output feather file path
-    output_file = f'training_data_combined_{start_date}_{end_date}.feather'
-
-    process_and_save_cri(start_date, end_date, data_directory, output_file)
+    process_and_save_cri(data_dir, start_date, end_date)

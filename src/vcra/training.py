@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 CHECKPOINT_DIR = 'checkpoints'
 
-def train_mlp_vcra(X_sub, y_sub, y_bin_sub, device='cpu', n_splits=5, epochs=100, batch_size=64, lr=1e-3, tag='', use_checkpoint=False):
+def train_mlp_vcra(data_dir, X_sub, y_sub, y_bin_sub, device='cpu', n_splits=5, epochs=100, batch_size=64, lr=1e-3, tag='', use_checkpoint=False):
     mlp_vcra_features = ['vessel_1_speed', 'vessel_1_course_rad', 'vessel_2_speed', 'vessel_2_course_rad', 
                          'dist_euclid', 'azimuth_angle_target_to_own', 'rel_movement_direction']
     X_data = X_sub.loc[:, mlp_vcra_features].values
@@ -120,9 +120,7 @@ def train_mlp_vcra(X_sub, y_sub, y_bin_sub, device='cpu', n_splits=5, epochs=100
 
     results_df = pd.DataFrame(results)
     
-    data_dir = "data"
     os.makedirs(data_dir, exist_ok=True)
-    
     results_df.to_feather(f'{data_dir}/mlp_vcra_skf_results_v14{tag}.feather')
 
 
@@ -145,7 +143,7 @@ def generate_sample_data(num_samples=1000):
     return X_data, y_data, y_bin_data
 
 
-def run(use_checkpoint, sample_data):    
+def run(data_dir, use_checkpoint, sample_data):    
     device = (
         "cuda"
         if torch.cuda.is_available()
@@ -158,7 +156,7 @@ def run(use_checkpoint, sample_data):
     if sample_data:
         X_sub, y_sub, y_bin_sub = generate_sample_data(num_samples=sample_data)
     else:
-        data = pd.read_csv("data/training_aisdk.csv")
+        data = pd.read_csv(f"{data_dir}/training_aisdk.csv")
         data.loc[:, 'ves_cri_bin'] = pd.cut(
             data.ves_cri, bins=np.arange(0, 1.1, .2),
             right=True, include_lowest=True
@@ -168,11 +166,11 @@ def run(use_checkpoint, sample_data):
         logger.info(ves_cri_bin_val_counts)
         ax = ves_cri_bin_val_counts.plot.bar()
         # ax.set_yscale('log') # Uncomment to use logarithmic scale
-        plt.savefig('data/training_aisdk.ves_cri.distribution.pdf', dpi=300)
+        plt.savefig(f'{data_dir}/training_aisdk.ves_cri.distribution.pdf', dpi=300)
 
         # %% Get a Stratified Subset (to ensure a "fair" comparison)
         X, y, y_bin = data.iloc[:, :-2], data.iloc[:, -2], data.iloc[:, -1].astype('str')
         X_sub, _, y_sub, _, y_bin_sub, _ = train_test_split(X, y, y_bin, train_size=0.35, random_state=10, stratify=y_bin)
     
     # Train the model with sample data
-    train_mlp_vcra(X_sub, y_sub, y_bin_sub, device=device, epochs=10, use_checkpoint=use_checkpoint)
+    train_mlp_vcra(data_dir, X_sub, y_sub, y_bin_sub, device=device, epochs=10, use_checkpoint=use_checkpoint)
