@@ -38,7 +38,7 @@ jobs:
           
   black:
     runs-on: ubuntu-latest
-    name: Code Quality with Black
+    name: Formatting Check with Black
     needs: setup
     steps:
       - name: Checkout code
@@ -47,8 +47,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - name: Use cached dependencies
-        run: ln -sfn ~/.cache/pip ~/.cache/pip
       - name: Run Black
         run: python -m black . --check
 
@@ -63,8 +61,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - name: Use cached dependencies
-        run: ln -sfn ~/.cache/pip ~/.cache/pip
       - name: Run tests with pytest
         run: pytest
         
