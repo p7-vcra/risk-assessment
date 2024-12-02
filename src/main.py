@@ -24,7 +24,6 @@ AIS_FILE_NAME = os.getenv('AIS_FILE_NAME')
 NUMBER_OF_WORKERS = int(os.getenv('NUMBER_OF_WORKERS', 4))
 SRC_PATH = os.getenv('SRC_PATH')
 
-
 def run_main_processing():
     """Run the main vessel encounter processing."""
     logger.info("Starting main processing...")
@@ -61,6 +60,7 @@ def process_single_file(data, current_index, total_files):
         file_name_csv = helper.get_AIS_data_file(data["url"])
         ve.vessel_encounters(file_name_csv)
         file_path = os.path.join(SRC_PATH, file_name_csv)
+        logger.info(f"Attempting to remove file {file_path}")
         os.remove(file_path)
         logger.info(f"Successfully processed and removed file {current_index} out of {total_files}: {data['file_name']}")
     except Exception as e:
