@@ -3,7 +3,7 @@ import pandas as pd
 def find_longest_and_shortest_pair_clustering(save=True):
 
     # Define the path to your CSV file
-    file_path = 'output/output_20241125-12:38:30_cutdown.csv'
+    file_path = 'output/TC_aisdk-2024-11-23.csv'
 
     # Read the CSV file into a pandas DataFrame
     df = pd.read_csv(file_path)
@@ -31,3 +31,6 @@ def find_longest_and_shortest_pair_clustering(save=True):
     if save:
         df.to_csv('vessel_encounter_data_with_duration.csv', index=False)
     return df
+
+if __name__ == '__main__':
+    find_longest_and_shortest_pair_clustering()
