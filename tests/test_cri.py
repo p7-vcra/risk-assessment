@@ -3,7 +3,14 @@ import pytest
 import numpy as np
 import pandas as pd
 import geopandas as gpd
-from src.utils.cri import EPS, calc_collision_eta, calc_safety_domain, cpa_membership, rel_bearing_membership, speed_ratio_membership
+from src.utils.cri import (
+    EPS,
+    calc_collision_eta,
+    calc_safety_domain,
+    cpa_membership,
+    rel_bearing_membership,
+    speed_ratio_membership,
+)
 from src.utils.cri import calc_crit_dist
 
 data = {
@@ -16,14 +23,26 @@ data = {
     "target_longitude": [95.07, 73.20, 59.87, 15.60, 15.60],
     "target_latitude": [96.99, 83.24, 21.23, 18.18, 18.34],
     "target_speed": [7.09, 9.38, 10.50, 11.84, 16.78],
-    "target_heading": [61.39, 23.42, 341.60, 347.63, 291.02]
+    "target_heading": [61.39, 23.42, 341.60, 347.63, 291.02],
 }
 
 vessel_pair_data = pd.DataFrame(data)
 
 features = ["vessel_id", "longitude", "latitude", "speed", "heading"]
-own_features = ["own_vessel_id", "own_longitude", "own_latitude", "own_speed", "own_heading"]
-target_features = ["target_vessel_id", "target_longitude", "target_latitude", "target_speed", "target_heading"]
+own_features = [
+    "own_vessel_id",
+    "own_longitude",
+    "own_latitude",
+    "own_speed",
+    "own_heading",
+]
+target_features = [
+    "target_vessel_id",
+    "target_longitude",
+    "target_latitude",
+    "target_speed",
+    "target_heading",
+]
 
 own_vessels = vessel_pair_data[own_features]
 target_vessels = vessel_pair_data[target_features]
@@ -31,10 +50,21 @@ target_vessels = vessel_pair_data[target_features]
 own_vessels.columns = features
 target_vessels.columns = features
 
-own_vessels = gpd.GeoDataFrame(own_vessels, crs=4326, geometry=gpd.points_from_xy(own_vessels['longitude'], own_vessels['latitude']))
-target_vessels = gpd.GeoDataFrame(target_vessels, crs=4326, geometry=gpd.points_from_xy(target_vessels['longitude'], target_vessels['latitude']))
+own_vessels = gpd.GeoDataFrame(
+    own_vessels,
+    crs=4326,
+    geometry=gpd.points_from_xy(own_vessels["longitude"], own_vessels["latitude"]),
+)
+target_vessels = gpd.GeoDataFrame(
+    target_vessels,
+    crs=4326,
+    geometry=gpd.points_from_xy(
+        target_vessels["longitude"], target_vessels["latitude"]
+    ),
+)
 
-class TestCPAMembership():
+
+class TestCPAMembership:
     def test_cpa_membership_below_min(self):
         assert cpa_membership(0.5, 1, 2) == 1
 
@@ -51,96 +81,181 @@ class TestCPAMembership():
         assert cpa_membership(2.5, 1, 2) == 0
 
 
-class TestCalcCollisionEta():
+class TestCalcCollisionEta:
     def test_calc_collision_eta_dcpa_below_d1(self):
         t1, t2 = calc_collision_eta(0.5, 10, 1, 2)
-        assert np.isclose(t1, np.sqrt(1 ** 2 - 0.5 ** 2) / 10)
-        assert np.isclose(t2, np.sqrt(2 ** 2 - 0.5 ** 2) / 10)
+        assert np.isclose(t1, np.sqrt(1**2 - 0.5**2) / 10)
+        assert np.isclose(t2, np.sqrt(2**2 - 0.5**2) / 10)
 
     def test_calc_collision_eta_dcpa_equal_d1(self):
         t1, t2 = calc_collision_eta(1, 10, 1, 2)
-        assert np.isclose(t1, np.sqrt(1 ** 2 - 1 ** 2) / 10)
-        assert np.isclose(t2, np.sqrt(2 ** 2 - 1 ** 2) / 10)
+        assert np.isclose(t1, np.sqrt(1**2 - 1**2) / 10)
+        assert np.isclose(t2, np.sqrt(2**2 - 1**2) / 10)
 
     def test_calc_collision_eta_dcpa_above_d1(self):
         t1, t2 = calc_collision_eta(1.5, 10, 1, 2)
         assert np.isclose(t1, (1 - 1.5) / 10)
-        assert np.isclose(t2, np.sqrt(2 ** 2 - 1.5 ** 2) / 10)
+        assert np.isclose(t2, np.sqrt(2**2 - 1.5**2) / 10)
 
     def test_calc_collision_eta_dcpa_equal_d2(self):
         t1, t2 = calc_collision_eta(2, 10, 1, 2)
         assert np.isclose(t1, (1 - 2) / 10)
-        assert np.isclose(t2, np.sqrt(2 ** 2 - 2 ** 2) / 10)
+        assert np.isclose(t2, np.sqrt(2**2 - 2**2) / 10)
 
-class TestCalcCritDist():
+
+class TestCalcCritDist:
     def test_calc_crit_dist_zero_length(self):
-        crit_safe_dist, avoidance_measure_dist = calc_crit_dist(0, np.pi/4)
+        crit_safe_dist, avoidance_measure_dist = calc_crit_dist(0, np.pi / 4)
         assert crit_safe_dist == 0
-        assert np.isclose(avoidance_measure_dist, 1.7 * np.cos(np.pi/4 - np.deg2rad(19)) + np.sqrt(4.4 + 2.89 * np.cos(np.pi/4 - np.deg2rad(19)) ** 2))
+        assert np.isclose(
+            avoidance_measure_dist,
+            1.7 * np.cos(np.pi / 4 - np.deg2rad(19))
+            + np.sqrt(4.4 + 2.89 * np.cos(np.pi / 4 - np.deg2rad(19)) ** 2),
+        )
 
     def test_calc_crit_dist_non_zero_length(self):
-        crit_safe_dist, avoidance_measure_dist = calc_crit_dist(100, np.pi/4)
+        crit_safe_dist, avoidance_measure_dist = calc_crit_dist(100, np.pi / 4)
         assert crit_safe_dist == 100 * 12
-        assert np.isclose(avoidance_measure_dist, 1.7 * np.cos(np.pi/4 - np.deg2rad(19)) + np.sqrt(4.4 + 2.89 * np.cos(np.pi/4 - np.deg2rad(19)) ** 2))
+        assert np.isclose(
+            avoidance_measure_dist,
+            1.7 * np.cos(np.pi / 4 - np.deg2rad(19))
+            + np.sqrt(4.4 + 2.89 * np.cos(np.pi / 4 - np.deg2rad(19)) ** 2),
+        )
 
     def test_calc_crit_dist_zero_bearing(self):
         crit_safe_dist, avoidance_measure_dist = calc_crit_dist(100, 0)
         assert crit_safe_dist == 100 * 12
-        assert np.isclose(avoidance_measure_dist, 1.7 * np.cos(0 - np.deg2rad(19)) + np.sqrt(4.4 + 2.89 * np.cos(0 - np.deg2rad(19)) ** 2))
+        assert np.isclose(
+            avoidance_measure_dist,
+            1.7 * np.cos(0 - np.deg2rad(19))
+            + np.sqrt(4.4 + 2.89 * np.cos(0 - np.deg2rad(19)) ** 2),
+        )
 
     def test_calc_crit_dist_high_bearing(self):
         crit_safe_dist, avoidance_measure_dist = calc_crit_dist(100, np.pi)
         assert crit_safe_dist == 100 * 12
-        assert np.isclose(avoidance_measure_dist, 1.7 * np.cos(np.pi - np.deg2rad(19)) + np.sqrt(4.4 + 2.89 * np.cos(np.pi - np.deg2rad(19)) ** 2))
+        assert np.isclose(
+            avoidance_measure_dist,
+            1.7 * np.cos(np.pi - np.deg2rad(19))
+            + np.sqrt(4.4 + 2.89 * np.cos(np.pi - np.deg2rad(19)) ** 2),
+        )
 
     def test_calc_crit_dist_negative_bearing(self):
-        crit_safe_dist, avoidance_measure_dist = calc_crit_dist(100, -np.pi/4)
+        crit_safe_dist, avoidance_measure_dist = calc_crit_dist(100, -np.pi / 4)
         assert crit_safe_dist == 100 * 12
-        assert np.isclose(avoidance_measure_dist, 1.7 * np.cos(-np.pi/4 - np.deg2rad(19)) + np.sqrt(4.4 + 2.89 * np.cos(-np.pi/4 - np.deg2rad(19)) ** 2))
+        assert np.isclose(
+            avoidance_measure_dist,
+            1.7 * np.cos(-np.pi / 4 - np.deg2rad(19))
+            + np.sqrt(4.4 + 2.89 * np.cos(-np.pi / 4 - np.deg2rad(19)) ** 2),
+        )
 
 
-class TestRelBearingMembership():
+class TestRelBearingMembership:
     def test_rel_bearing_membership_zero_bearing(self):
-        assert np.isclose(rel_bearing_membership(0), 1/2 * (np.cos(-np.deg2rad(19)) + np.sqrt(440/289 + np.cos(-np.deg2rad(19)) ** 2)) - 5/17)
+        assert np.isclose(
+            rel_bearing_membership(0),
+            1
+            / 2
+            * (
+                np.cos(-np.deg2rad(19))
+                + np.sqrt(440 / 289 + np.cos(-np.deg2rad(19)) ** 2)
+            )
+            - 5 / 17,
+        )
 
     def test_rel_bearing_membership_positive_bearing(self):
-        assert np.isclose(rel_bearing_membership(np.pi/4), 1/2 * (np.cos(np.pi/4 - np.deg2rad(19)) + np.sqrt(440/289 + np.cos(np.pi/4 - np.deg2rad(19)) ** 2)) - 5/17)
+        assert np.isclose(
+            rel_bearing_membership(np.pi / 4),
+            1
+            / 2
+            * (
+                np.cos(np.pi / 4 - np.deg2rad(19))
+                + np.sqrt(440 / 289 + np.cos(np.pi / 4 - np.deg2rad(19)) ** 2)
+            )
+            - 5 / 17,
+        )
 
     def test_rel_bearing_membership_negative_bearing(self):
-        assert np.isclose(rel_bearing_membership(-np.pi/4), 1/2 * (np.cos(-np.pi/4 - np.deg2rad(19)) + np.sqrt(440/289 + np.cos(-np.pi/4 - np.deg2rad(19)) ** 2)) - 5/17)
+        assert np.isclose(
+            rel_bearing_membership(-np.pi / 4),
+            1
+            / 2
+            * (
+                np.cos(-np.pi / 4 - np.deg2rad(19))
+                + np.sqrt(440 / 289 + np.cos(-np.pi / 4 - np.deg2rad(19)) ** 2)
+            )
+            - 5 / 17,
+        )
 
     def test_rel_bearing_membership_high_bearing(self):
-        assert np.isclose(rel_bearing_membership(np.pi), 1/2 * (np.cos(np.pi - np.deg2rad(19)) + np.sqrt(440/289 + np.cos(np.pi - np.deg2rad(19)) ** 2)) - 5/17)
+        assert np.isclose(
+            rel_bearing_membership(np.pi),
+            1
+            / 2
+            * (
+                np.cos(np.pi - np.deg2rad(19))
+                + np.sqrt(440 / 289 + np.cos(np.pi - np.deg2rad(19)) ** 2)
+            )
+            - 5 / 17,
+        )
 
     def test_rel_bearing_membership_low_bearing(self):
-        assert np.isclose(rel_bearing_membership(-np.pi), 1/2 * (np.cos(-np.pi - np.deg2rad(19)) + np.sqrt(440/289 + np.cos(-np.pi - np.deg2rad(19)) ** 2)) - 5/17)
+        assert np.isclose(
+            rel_bearing_membership(-np.pi),
+            1
+            / 2
+            * (
+                np.cos(-np.pi - np.deg2rad(19))
+                + np.sqrt(440 / 289 + np.cos(-np.pi - np.deg2rad(19)) ** 2)
+            )
+            - 5 / 17,
+        )
 
 
-class TestSpeedRatioMembership():
+class TestSpeedRatioMembership:
     def test_speed_ratio_membership_equal_speeds(self):
-        assert np.isclose(speed_ratio_membership(10, 10, np.pi/4), 1/(1 + 2/(1 * np.sqrt(1 ** 2 + 1 + 2 * 1 * np.sin(np.pi/4)) + EPS)))
+        assert np.isclose(
+            speed_ratio_membership(10, 10, np.pi / 4),
+            1 / (1 + 2 / (1 * np.sqrt(1**2 + 1 + 2 * 1 * np.sin(np.pi / 4)) + EPS)),
+        )
 
     def test_speed_ratio_membership_target_faster(self):
-        assert np.isclose(speed_ratio_membership(10, 20, np.pi/4), 1/(1 + 2/(2 * np.sqrt(2 ** 2 + 1 + 2 * 2 * np.sin(np.pi/4)) + EPS)))
+        assert np.isclose(
+            speed_ratio_membership(10, 20, np.pi / 4),
+            1 / (1 + 2 / (2 * np.sqrt(2**2 + 1 + 2 * 2 * np.sin(np.pi / 4)) + EPS)),
+        )
 
     def test_speed_ratio_membership_own_faster(self):
-        assert np.isclose(speed_ratio_membership(20, 10, np.pi/4), 1/(1 + 2/(0.5 * np.sqrt(0.5 ** 2 + 1 + 2 * 0.5 * np.sin(np.pi/4)) + EPS)))
+        assert np.isclose(
+            speed_ratio_membership(20, 10, np.pi / 4),
+            1
+            / (1 + 2 / (0.5 * np.sqrt(0.5**2 + 1 + 2 * 0.5 * np.sin(np.pi / 4)) + EPS)),
+        )
 
     def test_speed_ratio_membership_zero_own_speed(self):
         with pytest.raises(ZeroDivisionError):
-            speed_ratio_membership(0, 10, np.pi/4)
+            speed_ratio_membership(0, 10, np.pi / 4)
 
     def test_speed_ratio_membership_zero_target_speed(self):
-        assert np.isclose(speed_ratio_membership(10, 0, np.pi/4), 1/(1 + 2/(0 * np.sqrt(0 ** 2 + 1 + 2 * 0 * np.sin(np.pi/4)) + EPS)))
+        assert np.isclose(
+            speed_ratio_membership(10, 0, np.pi / 4),
+            1 / (1 + 2 / (0 * np.sqrt(0**2 + 1 + 2 * 0 * np.sin(np.pi / 4)) + EPS)),
+        )
 
     def test_speed_ratio_membership_zero_relative_course(self):
-        assert np.isclose(speed_ratio_membership(10, 10, 0), 1/(1 + 2/(1 * np.sqrt(1 ** 2 + 1 + 2 * 1 * np.sin(0)) + EPS)))
+        assert np.isclose(
+            speed_ratio_membership(10, 10, 0),
+            1 / (1 + 2 / (1 * np.sqrt(1**2 + 1 + 2 * 1 * np.sin(0)) + EPS)),
+        )
 
     def test_speed_ratio_membership_high_relative_course(self):
-        assert np.isclose(speed_ratio_membership(10, 10, np.pi), 1/(1 + 2/(1 * np.sqrt(1 ** 2 + 1 + 2 * 1 * np.sin(np.pi)) + EPS)))
+        assert np.isclose(
+            speed_ratio_membership(10, 10, np.pi),
+            1 / (1 + 2 / (1 * np.sqrt(1**2 + 1 + 2 * 1 * np.sin(np.pi)) + EPS)),
+        )
 
 
-class TestCalcSafetyDomain():
+class TestCalcSafetyDomain:
     def test_calc_safety_domain_first_interval(self):
         d1, d2 = calc_safety_domain(np.pi / 4)
         assert np.isclose(d1, 1.1 - 0.2 * (np.pi / 4) / np.pi)
@@ -181,4 +296,3 @@ class TestCalcSafetyDomain():
         d1, d2 = calc_safety_domain(2 * np.pi)
         assert np.isnan(d1)
         assert np.isnan(d2)
-        

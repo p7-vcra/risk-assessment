@@ -6,8 +6,9 @@ from datetime import datetime, timedelta
 from loguru import logger
 from utils.cri import calc_cpa, calc_cri
 
+
 def calc_vessel_cri(data):
-    cri_values = [] 
+    cri_values = []
     euclidean_distance = []
     rel_movement_direction = []
     azimuth_target_to_own = []
@@ -18,8 +19,15 @@ def calc_vessel_cri(data):
     data = new_data
 
     # Drop rows where the vessel speed and course are identical
-    new_data = data.drop(data[(data['vessel_1_speed'] == data['vessel_2_speed']) & (data['vessel_1_course'] == data['vessel_2_course'])].index)
-    logger.info(f"Dropped {len(data) - len(new_data)} rows with identical vessel speed and course")
+    new_data = data.drop(
+        data[
+            (data["vessel_1_speed"] == data["vessel_2_speed"])
+            & (data["vessel_1_course"] == data["vessel_2_course"])
+        ].index
+    )
+    logger.info(
+        f"Dropped {len(data) - len(new_data)} rows with identical vessel speed and course"
+    )
     data = new_data
 
     for idx, row in data.iterrows():
@@ -44,10 +52,10 @@ def calc_vessel_cri(data):
         cri_values.append(cri)
 
     # Add the collected data to the DataFrame
-    data['euclidean_distance'] = euclidean_distance
-    data['rel_movement_direction'] = rel_movement_direction
-    data['azimuth_target_to_own'] = azimuth_target_to_own
-    data['ves_cri'] = cri_values
+    data["euclidean_distance"] = euclidean_distance
+    data["rel_movement_direction"] = rel_movement_direction
+    data["azimuth_target_to_own"] = azimuth_target_to_own
+    data["ves_cri"] = cri_values
 
     return data
 
@@ -75,13 +83,17 @@ def process_and_save_cri(data_dir, start_date, end_date):
                 df = calc_vessel_cri(df)
                 results.append(df)
             except Exception as e:
-                logger.error(f"Error processing {filepath}: {e} {traceback.format_exc()}")
+                logger.error(
+                    f"Error processing {filepath}: {e} {traceback.format_exc()}"
+                )
         else:
             logger.warning(f"File not found: {filepath}")
 
     if results:
         # Concatenate all processed DataFrames and save to a single feather file
-        output_file = os.path.join(data_dir, f'training_aisdk_{start_date}_{end_date}.csv')
+        output_file = os.path.join(
+            data_dir, f"training_aisdk_{start_date}_{end_date}.csv"
+        )
         combined_data = pd.concat(results, ignore_index=True)
         combined_data.to_csv(output_file)
         logger.info(f"All data saved to {output_file}")
