@@ -15,12 +15,7 @@ from dotenv import load_dotenv
 
 # ENV variables
 load_dotenv()
-SOURCE_IP = os.getenv('SOURCE_IP', '0.0.0.0')
-SOURCE_PORT = int(os.getenv('SOURCE_PORT', 4571))
 TARGET_ENDPOINT_FOR_CURRENT_SHIPS = os.getenv('TARGET_ENDPOINT_FOR_CURRENT_SHIPS')
-LOG_LEVEL = os.getenv('SERVER_LOG_LEVEL', 'info')
-SERVER_WORKERS = int(os.getenv('SERVER_WORKERS', 1))
-
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -132,10 +127,3 @@ async def startup_event():
     asyncio.create_task(fetch_and_process_data())
     
 app.add_event_handler("startup", startup_event)
-
-def run_server():
-    """Run the FastAPI server."""
-    uvicorn.run(app, host=SOURCE_IP, port=SOURCE_PORT, log_level=LOG_LEVEL, workers=SERVER_WORKERS)
-
-if __name__ == "__main__":
-    run_server()
