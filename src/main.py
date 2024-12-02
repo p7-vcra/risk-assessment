@@ -117,7 +117,7 @@ def main():
 
     args = parser.parse_args()
 
-    logger.add(LOGGING_DIR + "/risk-assessment-{time:YYYYMMDD}.log", rotation="00:00")
+    logger.add(LOGGING_DIR + "/risk-assessment-{time:YYYYMMDD}.log", rotation="00:00", enqueue=True)
 
     if args.action == "encounters":
         timestart = time.time()
