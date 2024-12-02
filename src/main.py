@@ -1,45 +1,76 @@
 import asyncio
-from datetime import datetime
 import time
-import encounters.vessel_encounter as ve
-import pandas as pd
 import os
 import argparse
+import pandas as pd
+import encounters.helper as helper
+import encounters.vessel_encounter as ve
 
+from concurrent.futures import ProcessPoolExecutor
 from cProfile import Profile
 from pstats import Stats
 from vcra import training, vessel_cri
 from loguru import logger
 from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
 
-DATA_DIR = os.getenv("DATA_DIR")
+# Constants
+DATA_DIR = os.getenv('DATA_DIR')
+AIS_FILE_NAME = os.getenv('AIS_FILE_NAME')
+NUMBER_OF_WORKERS = int(os.getenv('NUMBER_OF_WORKERS', 4))
+
+def run_main_processing():
+    """Run the main vessel encounter processing."""
+    logger.info("Starting main processing...")
+    ve.vessel_encounters(AIS_FILE_NAME)
 
 
-def run_encounters():
-    src_path = os.getenv("SRC_PATH")
-    distance_threshold_in_km = int(os.getenv("DISTANCE_THRESHOLD_IN_KM", 1))
-    temporal_threshold_in_seconds = int(os.getenv("TEMPORAL_THRESHOLD_IN_SECONDS", 30))
-    time_for_batches_in_s = int(os.getenv("TIME_FOR_BATCHES_IN_S", 12))
-    run_from_timestamp = pd.to_datetime(
-        os.getenv("RUN_FROM_TIMESTAMP", "1000-01-01 00:00:00")
-    )
-    run_until_timestamp = pd.to_datetime(
-        os.getenv("RUN_UNTIL_TIMESTAMP", "9999-12-31 23:59:59")
-    )
+def create_training_data():
+    """Create training data using AIS files."""
+    logger.info("Creating training data...")
+    AIS_data_info = helper.get_AIS_data_info()
+    total_files = len(AIS_data_info)
+    
+    with ProcessPoolExecutor(max_workers=NUMBER_OF_WORKERS) as executor:
+        futures = [
+            executor.submit(process_single_file, data, index + 1, total_files)
+            for index, data in enumerate(AIS_data_info)
+        ]
+        
+        for future in asyncio.as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                logger.error(f"Error during processing: {e}")
 
-    # Run the data stream
-    asyncio.run(
-        ve.vessel_encounters(
-            src_path,
-            distance_threshold_in_km,
-            temporal_threshold_in_seconds,
-            time_for_batches_in_s,
-            run_from_timestamp,
-            run_until_timestamp,
-        )
-    )
+
+def process_single_file(data, current_index, total_files):
+    """Process a single AIS data file."""
+    logger.info(f"Processing file {current_index} out of {total_files}: {data['file_name']}")
+    try:
+        if helper.check_if_file_exists(data["file_name"]):
+            logger.info(f"File {current_index} already processed: {data['file_name']}")
+            return
+        
+        file_name_csv = helper.get_AIS_data_file(data["url"])
+        ve.vessel_encounters(file_name_csv)
+        file_path = os.path.join(DATA_DIR, file_name_csv)
+        logger.info(f"Attempting to remove file {file_path}")
+        os.remove(file_path)
+        logger.info(f"Successfully processed and removed file {current_index} out of {total_files}: {data['file_name']}")
+    except Exception as e:
+        logger.error(f"Error processing file {current_index} out of {total_files}: {data['file_name']}, Error: {e}")
+
+
+def run_with_profiling():
+    """Run the main function with profiling."""
+    logger.info("Profiling enabled")
+    with Profile() as pr:
+        run_main_processing()
+    stats = Stats(pr).sort_stats("cumtime")
+    stats.print_stats(100, r"\((?!\_).*\)$")  # Exclude private and magic callables.
 
 
 def main():
@@ -54,6 +85,7 @@ def main():
     parser_encounters.add_argument(
         "--profile", "-p", action="store_true", help="Run with profiling"
     )
+    parser_encounters.add_argument('--create-training-data', action='store_true', help="Create training data for the ML model")
 
     parser_training = subparsers.add_parser("training", help="Run the training script")
     parser_training.add_argument(
@@ -76,20 +108,17 @@ def main():
     logger.add("logs/risk-assessment-{time:YYYYMMDD}.log", rotation="00:00")
 
     if args.action == "encounters":
+        timestart = time.time()
+
         if args.profile:
-            logger.info("Running vessel encounters with profiling...")
-            with Profile() as pr:
-                run_encounters()
-            stats = Stats(pr).sort_stats("cumtime")
-            stats.print_stats(
-                100, r"\((?!\_).*\)$"
-            )  # Exclude private and magic callables.
+            run_with_profiling()
+        elif args.create_training_data:
+            create_training_data()
         else:
-            logger.info("Running vessel encounters...")
-            timestart = time.time()
-            run_encounters()
-            timeend = time.time()
-            print("Time taken: ", timeend - timestart)
+            run_main_processing()
+        
+        timeend = time.time()
+        logger.info(f"Total execution time: {timeend - timestart:.2f} seconds")
     elif args.action == "training":
         logger.info("Running VCRA model training...")
         training.run(args.use_checkpoint, args.sample_data)

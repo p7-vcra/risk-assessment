@@ -6,16 +6,24 @@ import time
 import itertools
 import utils.data_util as data_utils
 import warnings
+import requests
+import zipfile
+import rarfile
+
 from asyncio import sleep
 from datetime import datetime
 from geopy.distance import geodesic
 from sklearn.neighbors import BallTree
 from dotenv import load_dotenv
+from bs4 import BeautifulSoup
+from loguru import logger
 
 load_dotenv()
 
 EPS = 1e-9
-OUTPUT_DIRECTORY = os.getenv("OUTPUT_DIRECTORY", "./output")
+OUTPUT_DIRECTORY = os.getenv('OUTPUT_DIRECTORY', './output')
+DATA_DIR = os.getenv('DATA_DIR', './data')
+AIS_DATA_URL = os.getenv('AIS_DATA_URL', 'http://web.ais.dk/aisdata/')
 
 # pd.set_option('display.max_rows', None)
 # pd.set_option('display.max_columns', None)
@@ -31,7 +39,9 @@ def convert_gdf_from_deg_to_rad(gdf):
     return gdf
 
 
-def make_datastream_from_csv(path_to_file, s=1):
+def make_datastream_from_csv(file_name):
+    path_to_file = os.path.join(DATA_DIR, file_name)
+    
     # Load only necessary columns and filter data in chunks
     chunk_iter = pd.read_csv(
         path_to_file,
@@ -46,6 +56,7 @@ def make_datastream_from_csv(path_to_file, s=1):
             "Length",
         ],
         chunksize=100000,  # Adjust chunk size based on memory capacity
+        dayfirst=True
     )
 
     for chunk in chunk_iter:
@@ -192,14 +203,9 @@ def get_MMSI_info_for_current_pairs(timestamp, pairs, new_data):
     return df_pairs
 
 
-def temp_output_to_file(pairs_out):
+def temp_output_to_file(file_name, pairs_out):
     if not os.path.exists(OUTPUT_DIRECTORY):
         os.makedirs(OUTPUT_DIRECTORY)
-
-    files = os.listdir(OUTPUT_DIRECTORY)
-    files.sort(key=lambda x: os.path.getmtime(os.path.join(OUTPUT_DIRECTORY, x)))
-    for i in range(len(files)):
-        os.remove(os.path.join(OUTPUT_DIRECTORY, files[i]))
 
     pairs_out = pairs_out.reset_index()
     pairs_out = pairs_out.drop_duplicates(
@@ -211,15 +217,9 @@ def temp_output_to_file(pairs_out):
 
     # write to output file that
     current_time = time.strftime("%Y%m%d-%H:%M:%S")
-    print("Writing to output file at: ", current_time)
-    pairs_out.index.names = ["vessel_1", "vessel_2"]
-    # pairs_out.to_csv(f"./output/output_{current_time}.csv", mode='w', header=True, index=True)
-
-    pairs_out_cutdown = pairs_out[["distance", "start_time", "end_time"]]
-    pairs_out_cutdown.to_csv(
-        f"./output/output_{current_time}_cutdown.csv", mode="w", header=True, index=True
-    )
-
+    logger.info("Writing to output file at: ", current_time)
+    pairs_out.index.names = ['vessel_1', 'vessel_2']
+    pairs_out.to_csv(f"./output/TC_{file_name}", mode='w', header=True, index=True)
 
 def update_pairs(timestamp, active_pairs, current_pairs, temporal_threshold_in_seconds):
     # Identify disappeared and emerged pairs using set operations
@@ -262,3 +262,95 @@ def update_pairs(timestamp, active_pairs, current_pairs, temporal_threshold_in_s
 
     # Return updated active and inactive pairs
     return updated_active_pairs, disappeared_df
+
+
+def get_AIS_data_info():
+    try:
+        logger.info(f"Downloading AIS data from {AIS_DATA_URL}")
+        response = requests.get(AIS_DATA_URL)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        table = soup.find('table')
+        rows = table.find_all('tr')[4:]  # Skip the first 4 rows
+        data = []
+        for row in rows[:-1]:  # Skip the last row
+            cols = row.find_all('td')
+            if len(cols) >= 4:
+                entry = {
+                    'file_name': cols[1].text.strip(),
+                    'url': AIS_DATA_URL + cols[1].text.strip(),
+                    'size': cols[3].text.strip()
+                }
+            data.append(entry)
+        data.reverse()
+        return data
+
+    except Exception as e:
+        logger.error(f"Failed to download AIS data. Please check the URL and try again. Error: {e}")
+        return
+
+def get_AIS_data_file(url_name):
+    try:
+        #if src folder doestn exist create it
+        if not os.path.exists(DATA_DIR):
+            os.makedirs(DATA_DIR)
+        
+        logger.info(f"Downloading AIS data file: {url_name}")
+        response = requests.get(url_name, stream=True)
+        response.raise_for_status()
+
+        # Get file name from URL
+        file_name = url_name.split('/')[-1]
+        file_path = os.path.join(DATA_DIR, file_name)
+        file_path_csv = file_path.replace('.zip', '.csv').replace('.rar', '.csv')
+        file_name_csv = file_name.replace('.zip', '.csv').replace('.rar', '.csv')
+
+        if os.path.exists(file_path_csv):
+            logger.info(f"File already exists: {file_path_csv}")
+            return file_name_csv
+
+        # Get the total file size from the headers
+        total_size = int(response.headers.get('content-length', 0))
+        logger.info(f"Total file size: {total_size / (1024 * 1024):.2f} MB")
+
+        # Save the downloaded file with progress
+        with open(file_path, 'wb') as f:
+            downloaded_size = 0
+            percent_complete = 0
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+                    downloaded_size += len(chunk)
+                    new_percent_complete = int((downloaded_size / total_size) * 100)
+                    if new_percent_complete >= percent_complete + 10:
+                        percent_complete = new_percent_complete
+                        logger.info(f"Download progress: {percent_complete}% for {file_name}")
+
+        logger.info(f"File downloaded: {file_path}")
+
+        # Check and extract the file
+        if zipfile.is_zipfile(file_path):
+            logger.info("Extracting ZIP file... ")
+            with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                zip_ref.extractall(DATA_DIR)
+            logger.info("ZIP file extracted successfully.")
+        elif rarfile.is_rarfile(file_path):
+            logger.info("Extracting RAR file...")
+            with rarfile.RarFile(file_path, 'r') as rar_ref:
+                rar_ref.extractall(DATA_DIR)
+            logger.info("RAR file extracted successfully.")
+        else:
+            logger.warning("The downloaded file is neither a ZIP nor a RAR file.")
+        
+        # Optionally delete the archive after extraction
+        os.remove(file_path)
+        logger.info(f"Archive file {file_name} has been removed.")
+        return file_name_csv
+
+    except Exception as e:
+        logger.error(f"Failed to download or extract AIS data file. Error: {e}")
+
+def check_if_file_exists(file_name):
+    file_path_csv = os.path.join(OUTPUT_DIRECTORY, "TC_" + file_name.replace('.zip', '.csv').replace('.rar', '.csv'))
+    return os.path.exists(file_path_csv)

@@ -18,3 +18,4 @@ pyarrow
 ipykernel
 beautifulsoup4
 black[jupyter]
+rarfile
