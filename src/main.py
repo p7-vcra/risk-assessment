@@ -18,6 +18,7 @@ load_dotenv()
 
 # Constants
 DATA_DIR = os.getenv('DATA_DIR')
+LOGGING_DIR = os.getenv('LOGGING_DIR')
 AIS_FILE_NAME = os.getenv('AIS_FILE_NAME')
 NUMBER_OF_WORKERS = int(os.getenv('NUMBER_OF_WORKERS', 4))
 
@@ -104,8 +105,8 @@ def main():
     parser_cri = subparsers.add_parser("cri", help="Run the CRI script")
 
     args = parser.parse_args()
-
-    logger.add("logs/risk-assessment-{time:YYYYMMDD}.log", rotation="00:00")
+    
+    logger.add(LOGGING_DIR + "/risk-assessment-{time:YYYYMMDD}.log", rotation="00:00")
 
     if args.action == "encounters":
         timestart = time.time()
