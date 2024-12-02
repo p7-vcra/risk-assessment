@@ -11,29 +11,32 @@ from loguru import logger
 
 load_dotenv()
 
-DISTANCE_THRESHOLD_IN_KM = float(os.getenv('DISTANCE_THRESHOLD_IN_KM', 1))
-TEMPORAL_THRESHOLD_IN_SECONDS = float(os.getenv('TEMPORAL_THRESHOLD_IN_SECONDS', 30))
-TIME_FOR_BATCHES_IN_S = int(os.getenv('TIME_FOR_BATCHES_IN_S', 12))
+DISTANCE_THRESHOLD_IN_KM = float(os.getenv("DISTANCE_THRESHOLD_IN_KM", 1))
+TEMPORAL_THRESHOLD_IN_SECONDS = float(os.getenv("TEMPORAL_THRESHOLD_IN_SECONDS", 30))
+TIME_FOR_BATCHES_IN_S = int(os.getenv("TIME_FOR_BATCHES_IN_S", 12))
 
 
 def vessel_encounters(file_name):
     active_pairs = du.create_pair_dataframe()
     inactive_pairs = du.create_pair_dataframe()
     all_outputs = du.create_pair_dataframe()
-    
+
     last_logged_hour = None  # Track the last logged hour
     batch_data = []  # Buffer to store data for the batch
     last_batch_time = None
 
     # Stream data asynchronously from CSV
     for data in helper.make_datastream_from_csv(file_name):
-        timestamp = data['# Timestamp'].iloc[0]
+        timestamp = data["# Timestamp"].iloc[0]
 
         # Add data to batch
         batch_data.append(data)
 
         # Check if it's time to process the batch
-        if last_batch_time is None or (timestamp - last_batch_time).total_seconds() >= TIME_FOR_BATCHES_IN_S:
+        if (
+            last_batch_time is None
+            or (timestamp - last_batch_time).total_seconds() >= TIME_FOR_BATCHES_IN_S
+        ):
             # Concatenate all batch data for processing
             batch_df = pd.concat(batch_data, ignore_index=True)
             batch_df = batch_df.drop_duplicates(
@@ -48,8 +51,10 @@ def vessel_encounters(file_name):
 
             # Process the batch data
             pairs_out = du.create_pair_dataframe()
-            current_pairs = helper.vessel_encounters(timestamp, batch_df, DISTANCE_THRESHOLD_IN_KM)
-            current_hour = timestamp.floor('H')  # Floor to the nearest hour
+            current_pairs = helper.vessel_encounters(
+                timestamp, batch_df, DISTANCE_THRESHOLD_IN_KM
+            )
+            current_hour = timestamp.floor("H")  # Floor to the nearest hour
 
             if active_pairs.empty:  # Case 1: active_pairs is empty
                 active_pairs = current_pairs
@@ -75,7 +80,7 @@ def vessel_encounters(file_name):
 
             if not pairs_out.empty:
                 all_outputs = pd.concat([all_outputs, pairs_out])
-            
+
             # Log progress when a new hour starts
             if last_logged_hour is None or current_hour > last_logged_hour:
                 logger.info(f"Current timestamp: {timestamp}")
