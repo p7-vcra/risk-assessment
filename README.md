@@ -73,7 +73,7 @@ pytest
 
 ## Logging
 
-Logging is configured using a custom logger (`setup_logger`) and logs are written to the console. Modify `utils/logger.py` to adjust log settings.
+Logging is configured using [loguru](https://github.com/Delgan/loguru). Logs are written to both the console and a file. The logging level can be adjusted from the environment file.
 
 ## Profiling
 
