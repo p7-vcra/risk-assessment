@@ -52,7 +52,7 @@ def calc_vessel_cri(data):
         cri_values.append(cri)
 
     # Add the collected data to the DataFrame
-    data["euclidean_distance"] = euclidean_distance
+    data["euclidian_dist"] = euclidean_distance
     data["rel_movement_direction"] = rel_movement_direction
     data["azimuth_target_to_own"] = azimuth_target_to_own
     data["ves_cri"] = cri_values

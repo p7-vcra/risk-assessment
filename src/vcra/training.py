@@ -35,11 +35,11 @@ def train_mlp_vcra(
 ):
     mlp_vcra_features = [
         "vessel_1_speed",
-        "vessel_1_course_rad",
+        "vessel_1_course",
         "vessel_2_speed",
-        "vessel_2_course_rad",
-        "dist_euclid",
-        "azimuth_angle_target_to_own",
+        "vessel_2_course",
+        "euclidian_dist",
+        "azimuth_target_to_own",
         "rel_movement_direction",
     ]
     X_data = X_sub.loc[:, mlp_vcra_features].values
@@ -169,13 +169,14 @@ def generate_sample_data(num_samples=1000):
     X_data = pd.DataFrame(
         {
             "vessel_1_speed": np.random.rand(num_samples),
-            "vessel_1_course_rad": np.random.rand(num_samples)
+            "vessel_1_course": np.random.rand(num_samples)
             * 2
             * np.pi,  # Radians [0, 2π]
             "vessel_2_speed": np.random.rand(num_samples),
-            "vessel_2_course_rad": np.random.rand(num_samples) * 2 * np.pi,
-            "dist_euclid": np.random.rand(num_samples) * 100,  # Distance in some unit
-            "azimuth_angle_target_to_own": np.random.rand(num_samples) * 2 * np.pi,
+            "vessel_2_course": np.random.rand(num_samples) * 2 * np.pi,
+            "euclidian_dist": np.random.rand(num_samples)
+            * 100,  # Distance in some unit
+            "azimuth_target_to_own": np.random.rand(num_samples) * 2 * np.pi,
             "rel_movement_direction": np.random.rand(num_samples) * 2 * np.pi,
         }
     )
