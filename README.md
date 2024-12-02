@@ -13,6 +13,7 @@ This repo supports risk-assessment in the larger context of VCRA P7 Project.
 ```
 . 
 ├── .env.example         # Example environment file 
+├── .env                 # environment file 
 ├── requirements.txt     # Python dependencies 
 ├── src/                 # Main project source files 
 │   ├── utils/           # Utility functions and scripts 
@@ -21,10 +22,8 @@ This repo supports risk-assessment in the larger context of VCRA P7 Project.
 │   ├── encounters/      # Vessel encounter detection logic 
 ├── tests/               # Unit tests 
 │   ├── encounters/      # Tests specific to encounters module 
-├── data/                # Folder to store raw or intermediate data 
-├── output/              # Folder for processed output files 
-├── .vscode/             # VSCode project configuration 
-└── .pytest_cache/       # Cache for pytest (can be ignored)
+├── data/                # Folder to store raw or intermediate data - defined in .env
+└── output/              # Folder for processed output files - defined in .env
 ```
 
 ## Environment and Dependencies
@@ -58,11 +57,10 @@ python main.py --create-training-data
 
 ## Data Format
 
-The input AIS data should be supplied in the following CSV format:
+The input AIS data should be supplied in the following CSV format :
 
 ```
-Timestamp,Type of mobile,MMSI,Latitude,Longitude,Navigational status,ROT,SOG,COG,Heading,IMO,Callsign,Name,Ship type,Cargo type,Width,Length,Type of position fixing device,Draught,Destination,ETA,Data source type,A,B,C,D
-10/09/2024 00:00:00,Class A,111144445,57.150000,8.500000,Engaged in fishing,0.0,15,105,100,Unknown,Unknown,,Undefined,,,,Undefined,,Unknown,,AIS,,,,
+Timestamp,MMSI,Latitude,Longitude,SOG,COG,Length
 ```
 
 ## Testing
