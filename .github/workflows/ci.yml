@@ -34,5 +34,5 @@ jobs:
       - name: Run tests with pytest
         run: pytest
       - name: Run Black
-        run: python -m black . --check
+        run: python -m black . --check --verbose
   
