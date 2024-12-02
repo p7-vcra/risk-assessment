@@ -18,3 +18,7 @@ pyarrow
 ipykernel
 beautifulsoup4
 rarfile
+uvicorn
+fastapi
+pydantic
+httpx
