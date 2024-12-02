@@ -5,7 +5,7 @@ This repo supports risk-assessment in the larger context of VCRA P7 Project.
 ## Features
 
 - [x] Temporal + Spatial Clustering
-- [ ] Model to calculate VCRA
+- [x] Model to calculate VCRA
 - [ ] Server to provide VCRA + PVCRA
 
 ## Project Structure
