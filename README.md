@@ -10,7 +10,7 @@ This repo supports risk-assessment in the larger context of VCRA P7 Project.
 
 ## Project Structure
 
-```
+```plaintext
 . 
 ├── .env.example         # Example environment file 
 ├── .env                 # environment file 
@@ -59,7 +59,7 @@ python main.py --create-training-data
 
 The input AIS data should be supplied in the following CSV format :
 
-```
+```csv
 Timestamp,MMSI,Latitude,Longitude,SOG,COG,Length
 ```
 
