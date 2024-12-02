@@ -12,13 +12,13 @@ from pstats import Stats
 from vcra import training, vessel_cri
 from loguru import logger
 from dotenv import load_dotenv
+from utils.logger import setup_logger
 
 # Load environment variables
 load_dotenv()
 
 # Constants
-DATA_DIR = os.getenv("DATA_DIR")
-LOGGING_DIR = os.getenv("LOGGING_DIR")
+DATA_DIR = os.getenv("DATA_DIR", "./data")
 AIS_FILE_NAME = os.getenv("AIS_FILE_NAME")
 NUMBER_OF_WORKERS = int(os.getenv("NUMBER_OF_WORKERS", 4))
 
@@ -117,13 +117,7 @@ def main():
 
     args = parser.parse_args()
 
-    logger.add(
-        LOGGING_DIR + "/risk-assessment-{time:YYYYMMDD}.log",
-        rotation="00:00",
-        enqueue=True,
-        backtrace=True,
-        diagnose=True,
-    )
+    setup_logger()
 
     if args.action == "encounters":
         timestart = time.time()
