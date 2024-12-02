@@ -78,3 +78,34 @@ def vessel_encounters(file_name):
         # Process remaining batch logic here if needed
 
     helper.temp_output_to_file(file_name, all_outputs)
+
+#TODO: setup custom temporal and distance thresholds
+def vessel_encounters_server(data, active_pairs, distance_threshold=DISTANCE_THRESHOLD_IN_KM, temporal_threshold=TEMPORAL_THRESHOLD_IN_SECONDS):
+    """
+    Process vessel encounters for the provided data and the active pairs.
+    This function processes the data and updates the active pairs accordingly.
+    """
+    pairs_out = du.create_pair_dataframe()
+    inactive_pairs = du.create_pair_dataframe()
+    
+    # Iterate through the data stream (data is assumed to be a list of DataFrame chunks)
+    data = helper.format_data_from_SSE_stream(data)
+    
+    timestamp = data['timestamp'].iloc[0]  # Assuming all data chunks have the same timestamp
+
+    current_pairs = helper.vessel_encounters(timestamp, data, distance_threshold)
+
+    if active_pairs.empty:  # Case 1: active_pairs is empty
+        active_pairs = current_pairs
+    elif current_pairs.empty:  # Case 2: active pairs but no current pairs
+        pairs_out = active_pairs[active_pairs['end_time'] - active_pairs['start_time'] >= pd.Timedelta(seconds=temporal_threshold)]
+        inactive_pairs = pd.concat([inactive_pairs, pairs_out])
+        active_pairs = du.create_pair_dataframe()
+    else:  # Both active_pairs and current_pairs are not empty
+        active_pairs, new_inactive_pairs = helper.update_pairs(timestamp, active_pairs, current_pairs, temporal_threshold)
+        inactive_pairs = pd.concat([inactive_pairs, new_inactive_pairs])
+        pairs_out = active_pairs[active_pairs['end_time'] - active_pairs['start_time'] >= pd.Timedelta(seconds=temporal_threshold)]
+
+    return active_pairs, pairs_out
+        
+        
