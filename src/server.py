@@ -17,8 +17,10 @@ from dotenv import load_dotenv
 load_dotenv()
 SOURCE_IP = os.getenv('SOURCE_IP', '0.0.0.0')
 SOURCE_PORT = int(os.getenv('SOURCE_PORT', 4571))
+TARGET_ENDPOINT_FOR_CURRENT_SHIPS = os.getenv('TARGET_ENDPOINT_FOR_CURRENT_SHIPS')
 LOG_LEVEL = os.getenv('SERVER_LOG_LEVEL', 'info')
 SERVER_WORKERS = int(os.getenv('SERVER_WORKERS', 1))
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -31,7 +33,7 @@ app = FastAPI(title="Vessel Clustering API with Background Fetching")
 active_pairs = pd.DataFrame()
 
 # Configuration
-EXTERNAL_ENDPOINT = "http://130.225.37.58:8000/dummy-ais-data"  # Replace with your actual external endpoint
+EXTERNAL_ENDPOINT = TARGET_ENDPOINT_FOR_CURRENT_SHIPS   # Replace with your actual external endpoint
 FETCH_INTERVAL = 1  # Interval in seconds to fetch new data
 BATCH_PERIOD_IN_S = 12  # Collect data for 12 seconds before processing
 
