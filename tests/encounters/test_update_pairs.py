@@ -77,7 +77,9 @@ class TestUpdatePairs(unittest.TestCase):
             timestamp, active_pairs, current_pairs, temporal_threshold_in_seconds=60
         )
 
-        pd.testing.assert_frame_equal(updated_active_pairs.astype(data_utils.pairType), expected_active_pairs)
+        pd.testing.assert_frame_equal(
+            updated_active_pairs.astype(data_utils.pairType), expected_active_pairs
+        )
         self.assertEqual(len(updated_inactive_pairs), 0)  # No pairs should be inactive
 
     def test_update_pairs_no_current_pairs(self):
@@ -104,18 +106,48 @@ class TestUpdatePairs(unittest.TestCase):
 
         # No current pairs
         current_pairs = pd.DataFrame(
-            columns=["vessel_1", "vessel_2", "distance", "start_time", "end_time", "vessel_1_longitude", 
-                     "vessel_2_longitude", "vessel_1_latitude", "vessel_2_latitude", 
-                     "vessel_1_speed", "vessel_2_speed", "vessel_1_course", "vessel_2_course", 
-                     "vessel_1_length", "vessel_2_length"]
+            columns=[
+                "vessel_1",
+                "vessel_2",
+                "distance",
+                "start_time",
+                "end_time",
+                "vessel_1_longitude",
+                "vessel_2_longitude",
+                "vessel_1_latitude",
+                "vessel_2_latitude",
+                "vessel_1_speed",
+                "vessel_2_speed",
+                "vessel_1_course",
+                "vessel_2_course",
+                "vessel_1_length",
+                "vessel_2_length",
+            ]
         ).set_index(["vessel_1", "vessel_2"])
 
-        expected_active_pairs = pd.DataFrame(
-            columns=["vessel_1", "vessel_2", "distance", "start_time", "end_time", "vessel_1_longitude", 
-                     "vessel_2_longitude", "vessel_1_latitude", "vessel_2_latitude", 
-                     "vessel_1_speed", "vessel_2_speed", "vessel_1_course", "vessel_2_course", 
-                     "vessel_1_length", "vessel_2_length"]
-        ).set_index(["vessel_1", "vessel_2"]).astype(data_utils.pairType)
+        expected_active_pairs = (
+            pd.DataFrame(
+                columns=[
+                    "vessel_1",
+                    "vessel_2",
+                    "distance",
+                    "start_time",
+                    "end_time",
+                    "vessel_1_longitude",
+                    "vessel_2_longitude",
+                    "vessel_1_latitude",
+                    "vessel_2_latitude",
+                    "vessel_1_speed",
+                    "vessel_2_speed",
+                    "vessel_1_course",
+                    "vessel_2_course",
+                    "vessel_1_length",
+                    "vessel_2_length",
+                ]
+            )
+            .set_index(["vessel_1", "vessel_2"])
+            .astype(data_utils.pairType)
+        )
         expected_inactive_pairs = active_pairs.copy()
 
         timestamp = pd.Timestamp("2023-01-01 00:02:00")
@@ -124,8 +156,12 @@ class TestUpdatePairs(unittest.TestCase):
             timestamp, active_pairs, current_pairs, temporal_threshold_in_seconds=60
         )
 
-        pd.testing.assert_frame_equal(updated_active_pairs.astype(data_utils.pairType), expected_active_pairs)
-        pd.testing.assert_frame_equal(updated_inactive_pairs.astype(data_utils.pairType), expected_inactive_pairs)
+        pd.testing.assert_frame_equal(
+            updated_active_pairs.astype(data_utils.pairType), expected_active_pairs
+        )
+        pd.testing.assert_frame_equal(
+            updated_inactive_pairs.astype(data_utils.pairType), expected_inactive_pairs
+        )
 
     def test_update_pairs_with_no_distance_update(self):
         # Active pairs DataFrame
@@ -196,7 +232,9 @@ class TestUpdatePairs(unittest.TestCase):
             timestamp, active_pairs, current_pairs, temporal_threshold_in_seconds=60
         )
 
-        pd.testing.assert_frame_equal(updated_active_pairs.astype(data_utils.pairType), expected_active_pairs)
+        pd.testing.assert_frame_equal(
+            updated_active_pairs.astype(data_utils.pairType), expected_active_pairs
+        )
         self.assertEqual(len(updated_inactive_pairs), 0)  # No pairs should be inactive
 
     def test_update_pairs_with_temporal_threshold_exceeded(self):
@@ -267,10 +305,11 @@ class TestUpdatePairs(unittest.TestCase):
             timestamp, active_pairs, current_pairs, temporal_threshold_in_seconds=15
         )
 
-        #check that updated_Active_pairs is empty
+        # check that updated_Active_pairs is empty
         self.assertEqual(len(updated_active_pairs), 0)
-        pd.testing.assert_frame_equal(updated_inactive_pairs.astype(data_utils.pairType), expected_inactive_pairs)
-
+        pd.testing.assert_frame_equal(
+            updated_inactive_pairs.astype(data_utils.pairType), expected_inactive_pairs
+        )
 
     def test_update_pairs_with_temporal_threshold_not_exceeded(self):
         # Active pairs DataFrame
@@ -316,27 +355,59 @@ class TestUpdatePairs(unittest.TestCase):
         )
 
         expected_active_pairs = pd.DataFrame(
-            columns=["vessel_1", "vessel_2", "distance", "start_time", "end_time", "vessel_1_longitude", 
-                     "vessel_2_longitude", "vessel_1_latitude", "vessel_2_latitude", 
-                     "vessel_1_speed", "vessel_2_speed", "vessel_1_course", "vessel_2_course", 
-                     "vessel_1_length", "vessel_2_length"]
+            columns=[
+                "vessel_1",
+                "vessel_2",
+                "distance",
+                "start_time",
+                "end_time",
+                "vessel_1_longitude",
+                "vessel_2_longitude",
+                "vessel_1_latitude",
+                "vessel_2_latitude",
+                "vessel_1_speed",
+                "vessel_2_speed",
+                "vessel_1_course",
+                "vessel_2_course",
+                "vessel_1_length",
+                "vessel_2_length",
+            ]
         ).astype(data_utils.pairType)
 
         expected_inactive_pairs = pd.DataFrame(
-            columns=["vessel_1", "vessel_2", "distance", "start_time", "end_time", "vessel_1_longitude", 
-                     "vessel_2_longitude", "vessel_1_latitude", "vessel_2_latitude", 
-                     "vessel_1_speed", "vessel_2_speed", "vessel_1_course", "vessel_2_course", 
-                     "vessel_1_length", "vessel_2_length"]
+            columns=[
+                "vessel_1",
+                "vessel_2",
+                "distance",
+                "start_time",
+                "end_time",
+                "vessel_1_longitude",
+                "vessel_2_longitude",
+                "vessel_1_latitude",
+                "vessel_2_latitude",
+                "vessel_1_speed",
+                "vessel_2_speed",
+                "vessel_1_course",
+                "vessel_2_course",
+                "vessel_1_length",
+                "vessel_2_length",
+            ]
         ).astype(data_utils.pairType)
 
         timestamp = pd.Timestamp("2023-01-01 00:02:30")
-        
+
         updated_active_pairs, updated_inactive_pairs = helper.update_pairs(
             timestamp, active_pairs, current_pairs, temporal_threshold_in_seconds=200
         )
 
-        updated_active_pairs = updated_active_pairs.reset_index(drop=True) # reset index due to weird mismatch between indexes
+        updated_active_pairs = updated_active_pairs.reset_index(
+            drop=True
+        )  # reset index due to weird mismatch between indexes
         updated_inactive_pairs = updated_inactive_pairs.reset_index(drop=True)
 
-        pd.testing.assert_frame_equal(updated_active_pairs.astype(data_utils.pairType), expected_active_pairs)
-        pd.testing.assert_frame_equal(updated_inactive_pairs.astype(data_utils.pairType), expected_inactive_pairs)
+        pd.testing.assert_frame_equal(
+            updated_active_pairs.astype(data_utils.pairType), expected_active_pairs
+        )
+        pd.testing.assert_frame_equal(
+            updated_inactive_pairs.astype(data_utils.pairType), expected_inactive_pairs
+        )

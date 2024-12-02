@@ -1,27 +1,25 @@
-import logging
 import os
-from dotenv import load_dotenv
+from loguru import logger
 
-load_dotenv()
+LOGGING_DIR = os.getenv("LOGGING_DIR", "./logs")
 
-LOGGER_FILE_PATH = os.getenv("LOGGER_FILE_PATH", "vessel_encounter.log")
 
-def setup_logger(name):
-    """
-    Sets up a logger with the specified name, or returns an existing one if it exists.
-    """
-    logger = logging.getLogger(name)
-    if not logger.hasHandlers():  # Ensure no duplicate handlers are added
-        logger.setLevel(logging.INFO)  # Default to INFO; can be adjusted as needed
-        formatter = logging.Formatter(
-            "%(asctime)s - %(levelname)s - %(message)s"
-        )
-        # File handler
-        file_handler = logging.FileHandler(LOGGER_FILE_PATH)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-        # Stream handler
-        stream_handler = logging.StreamHandler()
-        stream_handler.setFormatter(formatter)
-        logger.addHandler(stream_handler)
-    return logger
+def setup_logger():
+    log_format = "<g>{time:YYYY-MM-DD HH:mm:ss.SSS}</g> | <lvl>{level:<8}</lvl> | <c>{process}</c> | <c>{module}</c>:<c>{function}</c> - <lvl>{message}</lvl>"
+
+    logger.remove()
+    logger.add(
+        sink=os.sys.stdout,
+        format=log_format,
+        enqueue=True,
+        backtrace=True,
+        diagnose=True,
+    )
+    logger.add(
+        sink=LOGGING_DIR + "/risk-assessment-{time:YYYYMMDD}.log",
+        format=log_format,
+        rotation="00:00",
+        enqueue=True,
+        backtrace=True,
+        diagnose=True,
+    )

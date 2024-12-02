@@ -15,5 +15,3 @@ RUN apt-get update && \
 
 # Copy the rest of the files to the container
 COPY . .
-
-# test
