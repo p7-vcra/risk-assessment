@@ -5,12 +5,12 @@ This repo supports risk-assessment in the larger context of VCRA P7 Project.
 ## Features
 
 - [x] Temporal + Spatial Clustering
-- [ ] Model to calculate VCRA
+- [x] Model to calculate VCRA
 - [ ] Server to provide VCRA + PVCRA
 
 ## Project Structure
 
-```
+```plaintext
 . 
 ├── .env.example         # Example environment file 
 ├── .env                 # environment file 
@@ -59,7 +59,7 @@ python main.py --create-training-data
 
 The input AIS data should be supplied in the following CSV format :
 
-```
+```csv
 Timestamp,MMSI,Latitude,Longitude,SOG,COG,Length
 ```
 
@@ -73,7 +73,7 @@ pytest
 
 ## Logging
 
-Logging is configured using a custom logger (`setup_logger`) and logs are written to the console. Modify `utils/logger.py` to adjust log settings.
+Logging is configured using [loguru](https://github.com/Delgan/loguru). Logs are written to both the console and a file. The logging level can be adjusted from the environment file.
 
 ## Profiling
 
