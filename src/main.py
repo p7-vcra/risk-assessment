@@ -121,6 +121,8 @@ def main():
         LOGGING_DIR + "/risk-assessment-{time:YYYYMMDD}.log",
         rotation="00:00",
         enqueue=True,
+        backtrace=True,
+        diagnose=True,
     )
 
     if args.action == "encounters":
