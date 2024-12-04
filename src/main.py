@@ -5,7 +5,7 @@ import argparse
 import pandas as pd
 import encounters.helper as helper
 import encounters.vessel_encounter as ve
-import server #TODO: probably change this name
+import server  # TODO: probably change this name
 import uvicorn
 
 
@@ -26,11 +26,11 @@ AIS_FILE_NAME = os.getenv("AIS_FILE_NAME")
 NUMBER_OF_WORKERS = int(os.getenv("NUMBER_OF_WORKERS", 4))
 
 # Server configuration
-SOURCE_IP = os.getenv('SOURCE_IP', '0.0.0.0')
-SOURCE_PORT = int(os.getenv('SOURCE_PORT', 4571))
-TARGET_ENDPOINT_FOR_CURRENT_SHIPS = os.getenv('TARGET_ENDPOINT_FOR_CURRENT_SHIPS')
-LOG_LEVEL = os.getenv('SERVER_LOG_LEVEL', 'info')
-SERVER_WORKERS = int(os.getenv('SERVER_WORKERS', 1))
+SOURCE_IP = os.getenv("SOURCE_IP", "0.0.0.0")
+SOURCE_PORT = int(os.getenv("SOURCE_PORT", 4571))
+TARGET_ENDPOINT_FOR_CURRENT_SHIPS = os.getenv("TARGET_ENDPOINT_FOR_CURRENT_SHIPS")
+LOG_LEVEL = os.getenv("SERVER_LOG_LEVEL", "info")
+SERVER_WORKERS = int(os.getenv("SERVER_WORKERS", 1))
 
 
 def run_main_processing():
@@ -89,11 +89,18 @@ def run_with_profiling():
         run_main_processing()
     stats = Stats(pr).sort_stats("cumtime")
     stats.print_stats(100, r"\((?!\_).*\)$")  # Exclude private and magic callables.
-    
-    
+
+
 def run_server():
     """Run the FastAPI server."""
-    uvicorn.run(server.app, host=SOURCE_IP, port=SOURCE_PORT, log_level=LOG_LEVEL, workers=SERVER_WORKERS)
+    uvicorn.run(
+        server.app,
+        host=SOURCE_IP,
+        port=SOURCE_PORT,
+        log_level=LOG_LEVEL,
+        workers=SERVER_WORKERS,
+    )
+
 
 def main():
     # --------- Single File Risk-Assessment ------------
@@ -131,7 +138,7 @@ def main():
 
     # --------- CRI Calculation ------------
     parser_cri = subparsers.add_parser("cri", help="Run the CRI script")
-    
+
     # --------- Run cluster + VCRA server ------------
     parser_server = subparsers.add_parser("server", help="Run the server")
 
