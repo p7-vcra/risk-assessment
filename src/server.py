@@ -8,6 +8,7 @@ import time
 import traceback
 import os
 import encounters.vessel_encounter as ve
+import numpy as np
 from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
 from typing import List, Dict, Any
@@ -26,6 +27,7 @@ app = FastAPI(title="Vessel Clustering API with Background Fetching")
 
 # Global variable to store active pairs - pandas DataFrame
 active_pairs: pd.DataFrame = pd.DataFrame()
+output_pairs: pd.DataFrame = pd.DataFrame()
 
 # Configuration
 EXTERNAL_ENDPOINT = (
@@ -133,7 +135,7 @@ async def process_data_line(line):
 
 async def process_batch(batch_df):
     """Process the accumulated batch of data."""
-    global active_pairs
+    global active_pairs, output_pairs
     logger.info(f"Processing batch of data with {len(batch_df)} rows")
 
     active_pairs, output_pairs = ve.vessel_encounters_server(
@@ -145,11 +147,18 @@ async def process_batch(batch_df):
 @app.get("/clusters/current", tags=["Clustering"])
 async def get_clusters():
     """Endpoint to get the current clusters."""
-    global active_pairs
-    if active_pairs.empty:
-        return {"message": "No cluster data available yet. Please wait."}
-    active_pairs_json = active_pairs.to_json(orient="records")
-    return {"clusters": active_pairs_json}
+    global output_pairs
+    if output_pairs.empty:
+        return {"message": "No clusters found"}
+
+    logger.info(f"active pairs before replacing: {output_pairs}")
+    output_pairs = output_pairs.replace([np.inf, -np.inf], np.nan).dropna()
+    logger.info(f"active pairs after replacing: {output_pairs}")
+
+    # Convert the DataFrame to JSON-compatible list of dicts
+    logger.info(f"ACTIVE PAIRS BEING RETURNED: {output_pairs}")
+    output_pairs_json = output_pairs.to_dict(orient="records")
+    return {"clusters": output_pairs_json}
 
 
 async def startup_event():
