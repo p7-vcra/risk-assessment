@@ -122,6 +122,7 @@ def vessel_encounters_server(data, active_pairs, distance_threshold=DISTANCE_THR
         inactive_pairs = pd.concat([inactive_pairs, new_inactive_pairs])
         pairs_out = active_pairs[active_pairs['end_time'] - active_pairs['start_time'] >= pd.Timedelta(seconds=temporal_threshold)]
 
+    pairs_out['duration'] = pairs_out['end_time'] - pairs_out['start_time']
     return active_pairs, pairs_out
         
         
