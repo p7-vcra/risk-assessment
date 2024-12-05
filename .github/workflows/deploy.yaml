@@ -25,7 +25,7 @@ jobs:
           cd ${{ secrets.APP_PATH }}
 
           # Identify the screen session by name
-          SCREEN_SESSION_NAME="PES"
+          SCREEN_SESSION_NAME="CLS"
 
           # Check if the screen session exists and terminate it if running
           if screen -list | grep -q "\.${SCREEN_SESSION_NAME}"; then
@@ -44,7 +44,7 @@ jobs:
           # Start a new screen session and deploy the app
           screen -dmS "${SCREEN_SESSION_NAME}"
           screen -S "${SCREEN_SESSION_NAME}" -X stuff 'source ${{ secrets.ENV_PATH }}\n'
-          screen -S "${SCREEN_SESSION_NAME}" -X stuff 'pip install -r requirements.txt'
+          screen -S "${SCREEN_SESSION_NAME}" -X stuff 'pip install -r requirements.txt\n'
           screen -S "${SCREEN_SESSION_NAME}" -X stuff 'python3 ${{ secrets.START_SCRIPT_PATH }} server\n'
 
           # List screen sessions for verification
