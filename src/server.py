@@ -149,16 +149,16 @@ async def get_clusters():
     """Endpoint to get the current clusters."""
     global output_pairs
     if output_pairs.empty:
-        return {"message": "No clusters found"}
+        # return empty json if no clusters are found
+        return {[]}
 
     logger.info(f"active pairs before replacing: {output_pairs}")
     output_pairs = output_pairs.replace([np.inf, -np.inf], np.nan).dropna()
     logger.info(f"active pairs after replacing: {output_pairs}")
 
     # Convert the DataFrame to JSON-compatible list of dicts
-    logger.info(f"ACTIVE PAIRS BEING RETURNED: {output_pairs}")
     output_pairs_json = output_pairs.to_dict(orient="records")
-    return {"clusters": output_pairs_json}
+    return {output_pairs_json}
 
 
 async def startup_event():
