@@ -161,8 +161,8 @@ async def get_clusters():
 
     output_pairs = output_pairs.replace([np.inf, -np.inf], np.nan).dropna()
 
-    # Convert the DataFrame to JSON-compatible list of dicts
-    clusters = {"clusters": output_pairs.to_dict(orient="records")}
+    # Convert the DataFrame to JSON-compatible list of dicts, including the index
+    clusters = {"clusters": output_pairs.reset_index().to_dict(orient="records")}
     return clusters
 
 

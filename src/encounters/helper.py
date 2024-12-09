@@ -199,8 +199,6 @@ def get_MMSI_info_for_current_pairs(timestamp, pairs, new_data):
                 # Add the record for this pair
                 data_records.append(
                     {
-                        "vessel_1_MMSI": mmsi_1,
-                        "vessel_2_MMSI": mmsi_2,
                         "vessel_1": sorted_pair[0],
                         "vessel_2": sorted_pair[1],
                         "vessel_1_longitude": data_1["Longitude"],

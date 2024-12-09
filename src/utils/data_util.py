@@ -1,8 +1,6 @@
 import pandas as pd
 
 pairType = {
-    "vessel_1_MMSI": "int64",
-    "vessel_2_MMSI": "int64",
     "distance": "float64",
     "start_time": "datetime64[ns]",
     "end_time": "datetime64[ns]",
@@ -21,8 +19,6 @@ pairType = {
 
 def create_pair_dataframe():
     columns = [
-        "vessel_1_MMSI",
-        "vessel_2_MMSI",
         "vessel_1",
         "vessel_2",
         "distance",
