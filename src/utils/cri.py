@@ -15,8 +15,8 @@ EPS = 1e-9  # Epsilon value added to avoid division by zero
 
 
 def calc_cpa(data):
-    lon_delta = data["vessel_1_longitude"] - data["vessel_2_longitude"]
-    lat_delta = data["vessel_1_latitude"] - data["vessel_2_latitude"]
+    lon_delta = data["vessel_2_longitude"] - data["vessel_1_longitude"]
+    lat_delta = data["vessel_2_latitude"] - data["vessel_1_latitude"]
 
     vessel_1_xy = np.array(
         [data["vessel_1_longitude"], data["vessel_1_latitude"]]
@@ -46,9 +46,9 @@ def calc_cpa(data):
     return {
         "euclidian_dist": euclidian_dist,
         "rel_speed_mag": rel_speed_mag,
-        "rel_movement_direction": normalize_angle(rel_movement_direction),
-        "azimuth_target_to_own": normalize_angle(azimuth_target_to_own),
-        "rel_bearing": normalize_angle(rel_bearing),
+        "rel_movement_direction": normalize_angle(rel_movement_direction) % (2 * np.pi),
+        "azimuth_target_to_own": normalize_angle(azimuth_target_to_own) % (2 * np.pi),
+        "rel_bearing": normalize_angle(rel_bearing) % (2 * np.pi),
         "dcpa": dcpa,
         "tcpa": tcpa,
     }
@@ -63,8 +63,12 @@ def calc_cri(
     dcpa,
     tcpa,
     rel_speed_mag,
+    stationary_speed_threshold=1,
     weights=[0.4457, 0.2258, 0.1408, 0.1321, 0.0556],
 ):
+    if tcpa <= 0 or data['vessel_1_speed'] <= stationary_speed_threshold:
+        return 0
+    
     result = np.nan
 
     d1, d2 = calc_safety_domain(azimuth_target_to_own)

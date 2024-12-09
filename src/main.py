@@ -100,20 +100,36 @@ def main():
     )
 
     parser_training = subparsers.add_parser("training", help="Run the training script")
-    parser_training.add_argument(
-        "--use-checkpoint",
-        "-uc",
-        action="store_true",
-        help="Flag to use checkpoint for resuming training",
-    )
-    parser_training.add_argument(
-        "--sample-data",
-        "-sd",
-        type=int,
-        help="Number of sample data points to generate for training",
-    )
+    # parser_training.add_argument(
+    #     "--use-checkpoint",
+    #     "-uc",
+    #     action="store_true",
+    #     help="Flag to use checkpoint for resuming training",
+    #     default=False
+    # )
+    # parser_training.add_argument(
+    #     "--sample-data",
+    #     "-sd",
+    #     type=int,
+    #     help="Number of sample data points to generate for training",
+    #     default=0
+    # )
 
     parser_cri = subparsers.add_parser("cri", help="Run the CRI script")
+    parser_cri.add_argument(
+        "--file-path",
+        "-f",
+        type=str,
+        help="Optional file path for CRI data",
+        default=None
+    )
+    parser_cri.add_argument(
+        "--tag",
+        "-t",
+        type=str,
+        help="Optional tag for the CRI data",
+        default=''
+    )
 
     args = parser.parse_args()
 
@@ -133,13 +149,13 @@ def main():
         logger.info(f"Total execution time: {timeend - timestart:.2f} seconds")
     elif args.action == "training":
         logger.info("Running VCRA model training...")
-        training.run(args.use_checkpoint, args.sample_data)
+        training.run(DATA_DIR)
     elif args.action == "cri":
         start_date = pd.to_datetime(os.getenv("CRI_START_DATE")).date()
         end_date = pd.to_datetime(os.getenv("CRI_END_DATE")).date()
 
         logger.info("Running CRI calculations for data...")
-        vessel_cri.run(DATA_DIR, start_date, end_date)
+        vessel_cri.run(DATA_DIR, start_date, end_date, args.file_path, args.tag)
 
 
 if __name__ == "__main__":
