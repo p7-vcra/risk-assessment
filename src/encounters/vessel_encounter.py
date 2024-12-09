@@ -138,7 +138,10 @@ def vessel_encounters_server(
             >= pd.Timedelta(seconds=temporal_threshold)
         ]
 
-    pairs_out.loc[:, "duration"] = pairs_out["end_time"] - pairs_out["start_time"]
-    pairs_out.loc[:, "duration"] = pairs_out["duration"].apply(lambda x: str(x))
+    pairs_out = pairs_out.assign(
+        duration=(pairs_out["end_time"] - pairs_out["start_time"]).apply(
+            lambda x: str(x)
+        )
+    )
 
     return active_pairs, pairs_out

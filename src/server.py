@@ -10,6 +10,7 @@ import os
 import encounters.vessel_encounter as ve
 import numpy as np
 from fastapi import FastAPI, BackgroundTasks
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any
 from dotenv import load_dotenv
@@ -17,6 +18,8 @@ from dotenv import load_dotenv
 # ENV variables
 load_dotenv()
 TARGET_ENDPOINT_FOR_CURRENT_SHIPS = os.getenv("TARGET_ENDPOINT_FOR_CURRENT_SHIPS")
+DISTANCE_THRESHOLD_IN_KM = float(os.getenv("DISTANCE_THRESHOLD_IN_KM", 1))
+TEMPOERAL_THRESHOLD_IN_SECONDS = float(os.getenv("TEMPOERAL_THRESHOLD_IN_SECONDS", 30))
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -139,9 +142,13 @@ async def process_batch(batch_df):
     logger.info(f"Processing batch of data with {len(batch_df)} rows")
 
     active_pairs, output_pairs = ve.vessel_encounters_server(
-        batch_df, active_pairs, temporal_threshold=1, distance_threshold=10
+        batch_df,
+        active_pairs,
+        temporal_threshold=TEMPOERAL_THRESHOLD_IN_SECONDS,
+        distance_threshold=DISTANCE_THRESHOLD_IN_KM,
     )
-    logger.info(f"Output pairs: {output_pairs}")
+    if not output_pairs.empty:
+        logger.info(f"Ouput pairs: {output_pairs}")
 
 
 @app.get("/clusters/current", tags=["Clustering"])
@@ -149,16 +156,14 @@ async def get_clusters():
     """Endpoint to get the current clusters."""
     global output_pairs
     if output_pairs.empty:
-        # return empty json if no clusters are found
-        return {[]}
+        # Return empty JSON if no clusters are found
+        return {"clusters": []}
 
-    logger.info(f"active pairs before replacing: {output_pairs}")
     output_pairs = output_pairs.replace([np.inf, -np.inf], np.nan).dropna()
-    logger.info(f"active pairs after replacing: {output_pairs}")
 
-    # Convert the DataFrame to JSON-compatible list of dicts
-    output_pairs_json = output_pairs.to_dict(orient="records")
-    return {output_pairs_json}
+    # Convert the DataFrame to JSON-compatible list of dicts, including the index
+    clusters = {"clusters": output_pairs.reset_index().to_dict(orient="records")}
+    return clusters
 
 
 async def startup_event():
