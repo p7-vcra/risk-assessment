@@ -60,7 +60,7 @@ def calc_vessel_cri(data, drop_rows=True, get_cri_values=True, vcra_model=None):
             else:
                 cri = calc_cri(
                     row,
-                    cpa["euclidian_dist"],
+                    cpa["euclidian_dist"][0][0],
                     cpa["rel_movement_direction"],
                     cpa["azimuth_target_to_own"],
                     cpa["rel_bearing"],
