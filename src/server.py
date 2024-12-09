@@ -30,7 +30,9 @@ app = FastAPI(title="Vessel Clustering API with Background Fetching")
 
 # Global variable to store active pairs - pandas DataFrame
 active_pairs: pd.DataFrame = pd.DataFrame()
-output_pairs: pd.DataFrame = pd.DataFrame()
+active_pairs_future: pd.DataFrame = pd.DataFrame()
+output_pairs_current: pd.DataFrame = pd.DataFrame()
+output_pairs_future: pd.DataFrame = pd.DataFrame()
 
 # Configuration
 EXTERNAL_ENDPOINT = (
@@ -138,31 +140,52 @@ async def process_data_line(line):
 
 async def process_batch(batch_df):
     """Process the accumulated batch of data."""
-    global active_pairs, output_pairs
+    global active_pairs, output_pairs_current
     logger.info(f"Processing batch of data with {len(batch_df)} rows")
 
-    active_pairs, output_pairs = ve.vessel_encounters_server(
+    active_pairs, output_pairs_current = ve.vessel_encounters_server(
         batch_df,
         active_pairs,
         temporal_threshold=TEMPOERAL_THRESHOLD_IN_SECONDS,
         distance_threshold=DISTANCE_THRESHOLD_IN_KM,
     )
-    if not output_pairs.empty:
-        logger.info(f"Ouput pairs: {output_pairs}")
+    if not output_pairs_current.empty:
+        logger.info(f"Ouput pairs: {output_pairs_current}")
 
 
 @app.get("/clusters/current", tags=["Clustering"])
 async def get_clusters():
     """Endpoint to get the current clusters."""
-    global output_pairs
-    if output_pairs.empty:
+    global output_pairs_current
+    if output_pairs_current.empty:
         # Return empty JSON if no clusters are found
         return {"clusters": []}
 
-    output_pairs = output_pairs.replace([np.inf, -np.inf], np.nan).dropna()
+    output_pairs_current = output_pairs_current.replace(
+        [np.inf, -np.inf], np.nan
+    ).dropna()
 
     # Convert the DataFrame to JSON-compatible list of dicts, including the index
-    clusters = {"clusters": output_pairs.reset_index().to_dict(orient="records")}
+    clusters = {
+        "clusters": output_pairs_current.reset_index().to_dict(orient="records")
+    }
+    return clusters
+
+
+@app.get("/clusters/future", tags=["Clustering"])
+async def get_future_clusters():
+    """Endpoint to get the future clusters."""
+    global output_pairs_future
+    if output_pairs_future.empty:
+        # Return empty JSON if no clusters are found
+        return {"clusters": []}
+
+    output_pairs_future = output_pairs_future.replace(
+        [np.inf, -np.inf], np.nan
+    ).dropna()
+
+    # Convert the DataFrame to JSON-compatible list of dicts, including the index
+    clusters = {"clusters": output_pairs_future.reset_index().to_dict(orient="records")}
     return clusters
 
 
