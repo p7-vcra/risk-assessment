@@ -66,9 +66,9 @@ def calc_cri(
     stationary_speed_threshold=1,
     weights=[0.4457, 0.2258, 0.1408, 0.1321, 0.0556],
 ):
-    if tcpa <= 0 or data['vessel_1_speed'] <= stationary_speed_threshold:
+    if tcpa <= 0 or data["vessel_1_speed"] <= stationary_speed_threshold:
         return 0
-    
+
     result = np.nan
 
     d1, d2 = calc_safety_domain(azimuth_target_to_own)

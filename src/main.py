@@ -145,14 +145,10 @@ def main():
         "-f",
         type=str,
         help="Optional file path for CRI data",
-        default=None
+        default=None,
     )
     parser_cri.add_argument(
-        "--tag",
-        "-t",
-        type=str,
-        help="Optional tag for the CRI data",
-        default=''
+        "--tag", "-t", type=str, help="Optional tag for the CRI data", default=""
     )
 
     # --------- Run cluster + VCRA server ------------

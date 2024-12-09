@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from loguru import logger
 from utils.cri import calc_cpa, calc_cri
 
+
 def calc_vessel_cri(data, drop_rows=True, get_cri_values=True, vcra_model=None):
     cri_values = []
     euclidean_distance = []
@@ -48,14 +49,16 @@ def calc_vessel_cri(data, drop_rows=True, get_cri_values=True, vcra_model=None):
             # Calculate CRI
             if vcra_model:
                 vcra_input = np.array(
-                    [row['vessel_1_speed'],
-                     row['vessel_1_course'],
-                     row['vessel_2_speed'],
-                     row['vessel_2_course'],
-                     cpa['euclidian_dist'][0][0],
-                     cpa['azimuth_target_to_own'],
-                     cpa['rel_movement_direction']]
-                    ).reshape(1, -1)
+                    [
+                        row["vessel_1_speed"],
+                        row["vessel_1_course"],
+                        row["vessel_2_speed"],
+                        row["vessel_2_course"],
+                        cpa["euclidian_dist"][0][0],
+                        cpa["azimuth_target_to_own"],
+                        cpa["rel_movement_direction"],
+                    ]
+                ).reshape(1, -1)
                 cri = max(0, min(1, vcra_model.predict(vcra_input)[0]))
             else:
                 cri = calc_cri(
@@ -74,7 +77,7 @@ def calc_vessel_cri(data, drop_rows=True, get_cri_values=True, vcra_model=None):
     data["euclidian_dist"] = euclidean_distance
     data["rel_movement_direction"] = rel_movement_direction
     data["azimuth_target_to_own"] = azimuth_target_to_own
-    
+
     if get_cri_values:
         data["ves_cri"] = cri_values
 
@@ -118,9 +121,7 @@ def process_and_save_cri(data_dir, start_date, end_date, file_path, tag):
     if results:
         # Concatenate all processed DataFrames and save to a single feather file
         if file_path:
-            output_file = os.path.join(
-                data_dir, f"training_aisdk_sf{tag}.csv"
-            )
+            output_file = os.path.join(data_dir, f"training_aisdk_sf{tag}.csv")
         else:
             output_file = os.path.join(
                 data_dir, f"training_aisdk_{start_date}_{end_date}{tag}.csv"
