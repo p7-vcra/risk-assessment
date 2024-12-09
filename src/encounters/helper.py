@@ -39,6 +39,39 @@ def convert_gdf_from_deg_to_rad(gdf):
     return gdf
 
 
+# TODO: Fix weird inconsistent column names and casing
+def format_data_from_SSE_stream(df):
+    # Parse 'timestamp' column as datetime
+    timestamp = pd.to_datetime(df["timestamp"].iloc[0])
+    df["timestamp"] = timestamp
+
+    df.columns = df.columns.str.lower()
+    df.rename(
+        columns={
+            "mmsi": "MMSI",
+            "longitude": "Longitude",
+            "latitude": "Latitude",
+            "sog": "speed",
+            "cog": "course",
+            "length": "Length",
+        },
+        inplace=True,
+    )
+
+    # Apply speed filter early to minimize processing
+    df = df.loc[(df["speed"] >= 1) & (df["speed"] <= 50)]
+
+    # Drop duplicates based on timestamp and MMSI
+    df = df.drop_duplicates(subset=["timestamp", "MMSI"])
+
+    # Create GeoDataFrame and process directly
+    df["geometry"] = gpd.points_from_xy(df["Longitude"], df["Latitude"])
+
+    df.reset_index(drop=True, inplace=True)
+
+    return df
+
+
 def make_datastream_from_csv(file_name):
     path_to_file = os.path.join(DATA_DIR, file_name)
 

@@ -19,3 +19,7 @@ ipykernel
 beautifulsoup4
 black[jupyter]
 rarfile
+uvicorn
+fastapi
+pydantic
+httpx

@@ -5,6 +5,9 @@ import argparse
 import pandas as pd
 import encounters.helper as helper
 import encounters.vessel_encounter as ve
+import server  # TODO: probably change this name
+import uvicorn
+
 
 from concurrent.futures import ProcessPoolExecutor
 from cProfile import Profile
@@ -21,6 +24,13 @@ load_dotenv()
 DATA_DIR = os.getenv("DATA_DIR", "./data")
 AIS_FILE_NAME = os.getenv("AIS_FILE_NAME")
 NUMBER_OF_WORKERS = int(os.getenv("NUMBER_OF_WORKERS", 4))
+
+# Server configuration
+SOURCE_IP = os.getenv("SOURCE_IP", "0.0.0.0")
+SOURCE_PORT = int(os.getenv("SOURCE_PORT", 4571))
+TARGET_ENDPOINT_FOR_CURRENT_SHIPS = os.getenv("TARGET_ENDPOINT_FOR_CURRENT_SHIPS")
+LOG_LEVEL = os.getenv("SERVER_LOG_LEVEL", "info")
+SERVER_WORKERS = int(os.getenv("SERVER_WORKERS", 1))
 
 
 def run_main_processing():
@@ -81,7 +91,19 @@ def run_with_profiling():
     stats.print_stats(100, r"\((?!\_).*\)$")  # Exclude private and magic callables.
 
 
+def run_server():
+    """Run the FastAPI server."""
+    uvicorn.run(
+        server.app,
+        host=SOURCE_IP,
+        port=SOURCE_PORT,
+        log_level=LOG_LEVEL,
+        workers=SERVER_WORKERS,
+    )
+
+
 def main():
+    # --------- Single File Risk-Assessment ------------
     parser = argparse.ArgumentParser(description="Run the risk assessment scripts")
     subparsers = parser.add_subparsers(
         dest="action", help="Specify the type of script to run"
@@ -99,6 +121,7 @@ def main():
         help="Create training data for the ML model",
     )
 
+    # --------- Training data for Risk-Assessment ------------
     parser_training = subparsers.add_parser("training", help="Run the training script")
     # parser_training.add_argument(
     #     "--use-checkpoint",
@@ -115,6 +138,7 @@ def main():
     #     default=0
     # )
 
+    # --------- CRI Calculation ------------
     parser_cri = subparsers.add_parser("cri", help="Run the CRI script")
     parser_cri.add_argument(
         "--file-path",
@@ -130,6 +154,9 @@ def main():
         help="Optional tag for the CRI data",
         default=''
     )
+
+    # --------- Run cluster + VCRA server ------------
+    parser_server = subparsers.add_parser("server", help="Run the server")
 
     args = parser.parse_args()
 
@@ -156,6 +183,9 @@ def main():
 
         logger.info("Running CRI calculations for data...")
         vessel_cri.run(DATA_DIR, start_date, end_date, args.file_path, args.tag)
+    elif args.action == "server":
+        logger.info("Running the server...")
+        run_server()
 
 
 if __name__ == "__main__":
