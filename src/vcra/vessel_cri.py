@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import traceback
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from loguru import logger
 from utils.cri import calc_cpa, calc_cri
 
@@ -19,29 +19,17 @@ def calc_vessel_cri(data, drop_rows=True, get_cri_values=True, vcra_model=None):
         new_data = data.dropna().copy()
         num_rows_dropped = len(data) - len(new_data)
         if num_rows_dropped > 0:
-            logger.warning(f"Dropped {num_rows_dropped} rows with missing values")
-            data = new_data
-
-        # Drop rows where the vessel speed and course are identical
-        new_data = data.drop(
-            data[
-                (data["vessel_1_speed"] == data["vessel_2_speed"])
-                & (data["vessel_1_course"] == data["vessel_2_course"])
-            ].index
-        ).copy()
-
-        num_rows_dropped = len(data) - len(new_data)
-        if num_rows_dropped > 0:
-            logger.warning(
-                f"Dropped {num_rows_dropped} rows with identical vessel speed and course"
-            )
+            if num_rows_dropped == 1:
+                logger.debug("Dropped 1 row with missing values")
+            else:
+                logger.debug(f"Dropped {num_rows_dropped} rows with missing values")
             data = new_data
 
     for idx, row in data.iterrows():
         cpa = calc_cpa(row)
 
         # Extract CPA-related data
-        euclidean_distance.append(cpa["euclidian_dist"][0][0])
+        euclidean_distance.append(cpa["euclidian_dist"])
         rel_movement_direction.append(cpa["rel_movement_direction"])
         azimuth_target_to_own.append(cpa["azimuth_target_to_own"])
 
@@ -54,7 +42,7 @@ def calc_vessel_cri(data, drop_rows=True, get_cri_values=True, vcra_model=None):
                         row["vessel_1_course"],
                         row["vessel_2_speed"],
                         row["vessel_2_course"],
-                        cpa["euclidian_dist"][0][0],
+                        cpa["euclidian_dist"],
                         cpa["azimuth_target_to_own"],
                         cpa["rel_movement_direction"],
                     ]
@@ -63,7 +51,7 @@ def calc_vessel_cri(data, drop_rows=True, get_cri_values=True, vcra_model=None):
             else:
                 cri = calc_cri(
                     row,
-                    cpa["euclidian_dist"][0][0],
+                    cpa["euclidian_dist"],
                     cpa["rel_movement_direction"],
                     cpa["azimuth_target_to_own"],
                     cpa["rel_bearing"],

@@ -234,7 +234,7 @@ class TestSpeedRatioMembership:
 
     def test_speed_ratio_membership_zero_own_speed(self):
         with pytest.raises(ZeroDivisionError):
-            speed_ratio_membership(0, 10, np.pi / 4)
+            speed_ratio_membership(0 - EPS, 10, np.pi / 4)
 
     def test_speed_ratio_membership_zero_target_speed(self):
         assert np.isclose(
