@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import pandas as pd
 import traceback
@@ -20,21 +21,6 @@ def calc_vessel_cri(data, drop_rows=True, get_cri_values=True, vcra_model=None):
         num_rows_dropped = len(data) - len(new_data)
         if num_rows_dropped > 0:
             logger.warning(f"Dropped {num_rows_dropped} rows with missing values")
-            data = new_data
-
-        # Drop rows where the vessel speed and course are identical
-        new_data = data.drop(
-            data[
-                (data["vessel_1_speed"] == data["vessel_2_speed"])
-                & (data["vessel_1_course"] == data["vessel_2_course"])
-            ].index
-        ).copy()
-
-        num_rows_dropped = len(data) - len(new_data)
-        if num_rows_dropped > 0:
-            logger.warning(
-                f"Dropped {num_rows_dropped} rows with identical vessel speed and course"
-            )
             data = new_data
 
     for idx, row in data.iterrows():
