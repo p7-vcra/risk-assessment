@@ -69,6 +69,8 @@ def format_data_from_SSE_stream(df):
 
     df.reset_index(drop=True, inplace=True)
 
+    df = convert_gdf_from_deg_to_rad(df)
+
     return df
 
 
