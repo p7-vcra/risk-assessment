@@ -248,31 +248,31 @@ async def get_clusters():
     return {"clusters": clusters_with_CRI.reset_index().to_dict(orient="records")}
 
 
-@app.get("/clusters/future", tags=["Clustering"])
-async def get_future_clusters():
-    """Endpoint to get the future clusters."""
+# @app.get("/clusters/future", tags=["Clustering"])
+# async def get_future_clusters():
+#     """Endpoint to get the future clusters."""
 
-    global output_pairs_future
-    if output_pairs_future.empty:
-        # Return empty JSON if no clusters are found
-        return {"clusters": []}
+#     global output_pairs_future
+#     if output_pairs_future.empty:
+#         # Return empty JSON if no clusters are found
+#         return {"clusters": []}
 
-    output_pairs_future = output_pairs_future.replace(
-        [np.inf, -np.inf], np.nan
-    ).dropna()
+#     output_pairs_future = output_pairs_future.replace(
+#         [np.inf, -np.inf], np.nan
+#     ).dropna()
 
-    model_for_VCRA = pd.read_pickle(PATH_TO_MODEL)
-    model_for_VCRA = model_for_VCRA.xs(0)["instance"]
+#     model_for_VCRA = pd.read_pickle(PATH_TO_MODEL)
+#     model_for_VCRA = model_for_VCRA.xs(0)["instance"]
 
-    clusters_with_CRI = vcra.calc_vessel_cri(
-        output_pairs_future,
-        drop_rows=True,
-        get_cri_values=True,
-        vcra_model=model_for_VCRA,
-    )
-    logger.info(f"Clusters with CRI: {clusters_with_CRI}")
+#     clusters_with_CRI = vcra.calc_vessel_cri(
+#         output_pairs_future,
+#         drop_rows=True,
+#         get_cri_values=True,
+#         vcra_model=model_for_VCRA,
+#     )
+#     logger.info(f"Clusters with CRI: {clusters_with_CRI}")
 
-    return {"clusters": clusters_with_CRI.reset_index().to_dict(orient="records")}
+#     return {"clusters": clusters_with_CRI.reset_index().to_dict(orient="records")}
 
 
 async def startup_event():
