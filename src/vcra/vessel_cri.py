@@ -1,10 +1,9 @@
 import os
-import sys
 import numpy as np
 import pandas as pd
 import traceback
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from loguru import logger
 from utils.cri import calc_cpa, calc_cri
 
