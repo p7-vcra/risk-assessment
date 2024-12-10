@@ -26,10 +26,16 @@ def calc_cpa(data):
         [data["vessel_2_latitude"], data["vessel_2_longitude"]]
     ).reshape(1, -1)
 
-    euclidian_dist = (haversine_distances(vessel_1_xy, vessel_2_xy) * EARTH_RADIUS_KM / NMI_IN_KM)[0][0]
+    euclidian_dist = (
+        haversine_distances(vessel_1_xy, vessel_2_xy) * EARTH_RADIUS_KM / NMI_IN_KM
+    )[0][0]
 
-    rel_speed_x, rel_speed_y, rel_speed_mag = calc_rel_speed(data["vessel_1_speed"], data["vessel_1_course"],
-                                                             data["vessel_2_speed"], data["vessel_2_course"],)
+    rel_speed_x, rel_speed_y, rel_speed_mag = calc_rel_speed(
+        data["vessel_1_speed"],
+        data["vessel_1_course"],
+        data["vessel_2_speed"],
+        data["vessel_2_course"],
+    )
 
     rel_movement_direction = np.arctan2(rel_speed_x, rel_speed_y)
     azimuth_target_to_own = np.arctan2(lon_delta, lat_delta)
@@ -71,7 +77,7 @@ def calc_cri(
     d1, d2 = calc_safety_domain(azimuth_target_to_own)
     u_dcpa = cpa_membership(np.abs(dcpa), d1, d2)
 
-    t1, t2 = calc_collision_eta(np.abs(dcpa), rel_speed_mag+EPS, d1, d2)
+    t1, t2 = calc_collision_eta(np.abs(dcpa), rel_speed_mag + EPS, d1, d2)
     u_tcpa = cpa_membership(np.abs(tcpa), t1, t2)
 
     crit_safe_dist, avoidance_measure_dist = calc_crit_dist(
@@ -184,13 +190,19 @@ def normalize_angle(angle):
 def calc_rel_speed(vessel_1_speed, vessel_1_course, vessel_2_speed, vessel_2_course):
     # Course should be in radians. If we are larger than 2 * pi we assume we are in degrees
     if vessel_1_course >= 2 * np.pi:
-        raise ValueError(f"Invalid vessel_1_course: {vessel_1_course}. It should be in radians.")
+        raise ValueError(
+            f"Invalid vessel_1_course: {vessel_1_course}. It should be in radians."
+        )
     if vessel_2_course >= 2 * np.pi:
         raise ValueError(
             f"Invalid vessel_2_course: {vessel_2_course}. It should be in radians."
         )
 
-    rel_speed_x = vessel_2_speed * np.sin(vessel_2_course) - vessel_1_speed * np.sin(vessel_1_course)
-    rel_speed_y = vessel_2_speed * np.cos(vessel_2_course) - vessel_1_speed * np.cos(vessel_1_course)
+    rel_speed_x = vessel_2_speed * np.sin(vessel_2_course) - vessel_1_speed * np.sin(
+        vessel_1_course
+    )
+    rel_speed_y = vessel_2_speed * np.cos(vessel_2_course) - vessel_1_speed * np.cos(
+        vessel_1_course
+    )
     rel_speed_mag = np.linalg.norm([rel_speed_x, rel_speed_y])
     return rel_speed_x, rel_speed_y, rel_speed_mag
