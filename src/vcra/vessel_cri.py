@@ -20,7 +20,10 @@ def calc_vessel_cri(data, drop_rows=True, get_cri_values=True, vcra_model=None):
         new_data = data.dropna().copy()
         num_rows_dropped = len(data) - len(new_data)
         if num_rows_dropped > 0:
-            logger.warning(f"Dropped {num_rows_dropped} rows with missing values")
+            if num_rows_dropped == 1:
+                logger.debug("Dropped 1 row with missing values")
+            else:
+                logger.debug(f"Dropped {num_rows_dropped} rows with missing values")
             data = new_data
 
     for idx, row in data.iterrows():
