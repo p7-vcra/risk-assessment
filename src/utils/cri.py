@@ -10,6 +10,7 @@ from sklearn.metrics.pairwise import haversine_distances
 
 # vessel_1_course and vessel_2_course are in radians
 
+EARTH_RADIUS_KM = 6371
 NMI_IN_KM = 1.852  # 1.852 is the length of a nautical mile in km
 EPS = 1e-9  # Epsilon value added to avoid division by zero
 
@@ -19,13 +20,13 @@ def calc_cpa(data):
     lat_delta = data["vessel_2_latitude"] - data["vessel_1_latitude"]
 
     vessel_1_xy = np.array(
-        [data["vessel_1_longitude"], data["vessel_1_latitude"]]
+        [data["vessel_1_latitude"], data["vessel_1_longitude"]]
     ).reshape(1, -1)
     vessel_2_xy = np.array(
-        [data["vessel_2_longitude"], data["vessel_2_latitude"]]
+        [data["vessel_2_latitude"], data["vessel_2_longitude"]]
     ).reshape(1, -1)
 
-    euclidian_dist = haversine_distances(vessel_1_xy, vessel_2_xy) / NMI_IN_KM
+    euclidian_dist = (haversine_distances(vessel_1_xy, vessel_2_xy) * EARTH_RADIUS_KM / NMI_IN_KM)[0][0]
 
     rel_speed_x, rel_speed_y, rel_speed_mag = calc_rel_speed(
         data["vessel_1_speed"],

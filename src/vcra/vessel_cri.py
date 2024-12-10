@@ -41,7 +41,7 @@ def calc_vessel_cri(data, drop_rows=True, get_cri_values=True, vcra_model=None):
         cpa = calc_cpa(row)
 
         # Extract CPA-related data
-        euclidean_distance.append(cpa["euclidian_dist"][0][0])
+        euclidean_distance.append(cpa["euclidian_dist"])
         rel_movement_direction.append(cpa["rel_movement_direction"])
         azimuth_target_to_own.append(cpa["azimuth_target_to_own"])
 
@@ -54,7 +54,7 @@ def calc_vessel_cri(data, drop_rows=True, get_cri_values=True, vcra_model=None):
                         row["vessel_1_course"],
                         row["vessel_2_speed"],
                         row["vessel_2_course"],
-                        cpa["euclidian_dist"][0][0],
+                        cpa["euclidian_dist"],
                         cpa["azimuth_target_to_own"],
                         cpa["rel_movement_direction"],
                     ]
@@ -63,7 +63,7 @@ def calc_vessel_cri(data, drop_rows=True, get_cri_values=True, vcra_model=None):
             else:
                 cri = calc_cri(
                     row,
-                    cpa["euclidian_dist"][0][0],
+                    cpa["euclidian_dist"],
                     cpa["rel_movement_direction"],
                     cpa["azimuth_target_to_own"],
                     cpa["rel_bearing"],
