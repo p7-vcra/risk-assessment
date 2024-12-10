@@ -279,7 +279,7 @@ async def startup_event():
     """Start the background task to fetch and process data."""
     logger.info("Starting background task to fetch and process data.")
     asyncio.create_task(fetch_and_process_current_clusters())
-    asyncio.create_task(fetch_and_process_future_clusters())
+    # asyncio.create_task(fetch_and_process_future_clusters())
 
 
 app.add_event_handler("startup", startup_event)
