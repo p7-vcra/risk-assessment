@@ -7,8 +7,9 @@ import pandas as pd
 import time
 import traceback
 import os
-import encounters.vessel_encounter as ve
 import numpy as np
+import encounters.vessel_encounter as ve
+import vcra.vessel_cri as vcra
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -20,6 +21,8 @@ load_dotenv()
 TARGET_ENDPOINT_FOR_CURRENT_SHIPS = os.getenv("TARGET_ENDPOINT_FOR_CURRENT_SHIPS")
 DISTANCE_THRESHOLD_IN_KM = float(os.getenv("DISTANCE_THRESHOLD_IN_KM", 1))
 TEMPOERAL_THRESHOLD_IN_SECONDS = float(os.getenv("TEMPOERAL_THRESHOLD_IN_SECONDS", 30))
+
+PATH_TO_MODEL = os.getenv("CRI_MODEL_PATH")
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -46,7 +49,7 @@ data_buffer = []
 last_batch_time = None
 
 
-async def fetch_and_process_data():
+async def fetch_and_process_current_clusters():
     """Fetch data from the external endpoint as a server-sent event and process it after accumulating for a set period."""
     global active_pairs, data_buffer, last_batch_time
 
@@ -89,6 +92,72 @@ async def fetch_and_process_data():
             # Delay before retrying to avoid rapid reconnect attempts
             logger.info("Retrying connection in 5 seconds...")
             await asyncio.sleep(5)
+
+
+async def fetch_and_process_future_clusters():
+    """
+    Fetch data from the external endpoint as a server-sent event (SSE)
+    for future vessel predictions and process it after accumulating for a set period.
+    """
+    global active_pairs_future
+
+    while True:  # Retry loop
+        async with httpx.AsyncClient() as client:
+            logger.info("Connecting to the endpoint for future predictions (SSE)...")
+            try:
+                async with client.stream("GET", EXTERNAL_ENDPOINT) as response:
+                    if response.status_code != 200:
+                        logger.error(
+                            f"Failed to connect to endpoint: {response.status_code}"
+                        )
+                        raise httpx.RequestError(
+                            f"Invalid status code: {response.status_code}"
+                        )
+
+                    event = None
+                    async for line in response.aiter_lines():
+                        if line.startswith("event:"):
+                            event = line[len("event:") :].strip()
+                        elif line.startswith("data:"):
+                            if event == "prediction":  # Check for prediction event
+                                await process_future_data_line(line)
+                                event = None
+
+            except httpx.RequestError as req_error:
+                logger.error(f"Error with SSE connection for future data: {req_error}")
+            except Exception as e:
+                logger.error(f"Unexpected error in future data stream: {e}")
+
+            # Clear cache and reset variables
+            logger.warning("Resetting due to connection failure in future clusters.")
+            logger.info("Retrying connection for future clusters in 5 seconds...")
+            await asyncio.sleep(5)
+
+
+async def process_future_data_line(line):
+    """Process a data line from the SSE stream for future predictions."""
+    global active_pairs_future, data_buffer, last_batch_time
+
+    try:
+        json_data = line[len("data: ") :].strip()
+        data = json.loads(json_data)
+
+        logger.info(f"Received future prediction data: {len(data)}")
+
+        if isinstance(data, dict):
+            df = pd.DataFrame([data])
+        elif isinstance(data, list) and all(isinstance(i, dict) for i in data):
+            df = pd.DataFrame(data)
+        else:
+            logger.warning(f"Unexpected format for future prediction data: {data}")
+            return
+
+        print(df)
+
+    except json.JSONDecodeError as json_error:
+        logger.error(f"Error decoding JSON for future data: {json_error}")
+    except Exception as e:
+        logger.error(f"Error processing future data: {e}\n{traceback.format_exc()}")
 
 
 async def process_data_line(line):
@@ -165,16 +234,24 @@ async def get_clusters():
         [np.inf, -np.inf], np.nan
     ).dropna()
 
-    # Convert the DataFrame to JSON-compatible list of dicts, including the index
-    clusters = {
-        "clusters": output_pairs_current.reset_index().to_dict(orient="records")
-    }
-    return clusters
+    model_for_VCRA = pd.read_pickle(PATH_TO_MODEL)
+    model_for_VCRA = model_for_VCRA.xs(0)["instance"]
+
+    clusters_with_CRI = vcra.calc_vessel_cri(
+        output_pairs_current,
+        drop_rows=True,
+        get_cri_values=True,
+        vcra_model=model_for_VCRA,
+    )
+    logger.info(f"Clusters with CRI: {clusters_with_CRI}")
+
+    return {"clusters": clusters_with_CRI.reset_index().to_dict(orient="records")}
 
 
 @app.get("/clusters/future", tags=["Clustering"])
 async def get_future_clusters():
     """Endpoint to get the future clusters."""
+
     global output_pairs_future
     if output_pairs_future.empty:
         # Return empty JSON if no clusters are found
@@ -184,15 +261,25 @@ async def get_future_clusters():
         [np.inf, -np.inf], np.nan
     ).dropna()
 
-    # Convert the DataFrame to JSON-compatible list of dicts, including the index
-    clusters = {"clusters": output_pairs_future.reset_index().to_dict(orient="records")}
-    return clusters
+    model_for_VCRA = pd.read_pickle(PATH_TO_MODEL)
+    model_for_VCRA = model_for_VCRA.xs(0)["instance"]
+
+    clusters_with_CRI = vcra.calc_vessel_cri(
+        output_pairs_future,
+        drop_rows=True,
+        get_cri_values=True,
+        vcra_model=model_for_VCRA,
+    )
+    logger.info(f"Clusters with CRI: {clusters_with_CRI}")
+
+    return {"clusters": clusters_with_CRI.reset_index().to_dict(orient="records")}
 
 
 async def startup_event():
     """Start the background task to fetch and process data."""
     logger.info("Starting background task to fetch and process data.")
-    asyncio.create_task(fetch_and_process_data())
+    asyncio.create_task(fetch_and_process_current_clusters())
+    asyncio.create_task(fetch_and_process_future_clusters())
 
 
 app.add_event_handler("startup", startup_event)
