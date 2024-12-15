@@ -33,9 +33,7 @@ app = FastAPI(title="Vessel Clustering API with Background Fetching")
 
 # Global variable to store active pairs - pandas DataFrame
 active_pairs: pd.DataFrame = pd.DataFrame()
-active_pairs_future: pd.DataFrame = pd.DataFrame()
-output_pairs_current: pd.DataFrame = pd.DataFrame()
-output_pairs_future: pd.DataFrame = pd.DataFrame()
+output_pairs: pd.DataFrame = pd.DataFrame()
 
 # Configuration
 EXTERNAL_ENDPOINT = (
@@ -209,70 +207,67 @@ async def process_data_line(line):
 
 async def process_batch(batch_df):
     """Process the accumulated batch of data."""
-    global active_pairs, output_pairs_current
+    global active_pairs, output_pairs
     logger.info(f"Processing batch of data with {len(batch_df)} rows")
 
-    active_pairs, output_pairs_current = ve.vessel_encounters_server(
+    active_pairs, output_pairs = ve.vessel_encounters_server(
         batch_df,
         active_pairs,
         temporal_threshold=TEMPOERAL_THRESHOLD_IN_SECONDS,
         distance_threshold=DISTANCE_THRESHOLD_IN_KM,
     )
-    if not output_pairs_current.empty:
-        logger.info(f"Ouput pairs: {output_pairs_current}")
 
 
 @app.get("/clusters/current", tags=["Clustering"])
 async def get_clusters():
     """Endpoint to get the current clusters."""
-    global output_pairs_current
-    if output_pairs_current.empty:
+    global output_pairs
+    if output_pairs.empty:
         # Return empty JSON if no clusters are found
         return {"clusters": []}
 
-    output_pairs_current = output_pairs_current.replace(
-        [np.inf, -np.inf], np.nan
-    ).dropna()
+    output_pairs = output_pairs.replace([np.inf, -np.inf], np.nan).dropna()
 
     model_for_VCRA = pd.read_pickle(PATH_TO_MODEL)
     model_for_VCRA = model_for_VCRA.xs(0)["instance"]
 
     clusters_with_CRI = vcra.calc_vessel_cri(
-        output_pairs_current,
+        output_pairs,
         drop_rows=True,
         get_cri_values=True,
         vcra_model=model_for_VCRA,
     )
-    logger.info(f"Clusters with CRI: {clusters_with_CRI}")
 
     return {"clusters": clusters_with_CRI.reset_index().to_dict(orient="records")}
 
 
-# @app.get("/clusters/future", tags=["Clustering"])
-# async def get_future_clusters():
-#     """Endpoint to get the future clusters."""
+@app.post("/clusters/future", tags=["Clustering"])
+async def get_future_clusters(post_data: dict):
+    """Endpoint to get the future clusters."""
+    try:
+        # post_data is a json object with the future predictions
+        future_cri_data = post_data.get("future_cri_data")
+        future_cri_data = pd.DataFrame(future_cri_data)
 
-#     global output_pairs_future
-#     if output_pairs_future.empty:
-#         # Return empty JSON if no clusters are found
-#         return {"clusters": []}
+        # Clean the data
+        future_cri_data = future_cri_data.replace([np.inf, -np.inf], np.nan).dropna()
 
-#     output_pairs_future = output_pairs_future.replace(
-#         [np.inf, -np.inf], np.nan
-#     ).dropna()
+        model_for_VCRA = pd.read_pickle(PATH_TO_MODEL)
+        model_for_VCRA = model_for_VCRA.xs(0)["instance"]
 
-#     model_for_VCRA = pd.read_pickle(PATH_TO_MODEL)
-#     model_for_VCRA = model_for_VCRA.xs(0)["instance"]
+        # Perform vessel CRI calculation
+        clusters_with_CRI = vcra.calc_vessel_cri(
+            future_cri_data,
+            drop_rows=True,
+            get_cri_values=True,
+            vcra_model=model_for_VCRA,
+        )
 
-#     clusters_with_CRI = vcra.calc_vessel_cri(
-#         output_pairs_future,
-#         drop_rows=True,
-#         get_cri_values=True,
-#         vcra_model=model_for_VCRA,
-#     )
-#     logger.info(f"Clusters with CRI: {clusters_with_CRI}")
+        # Return the clusters as a JSON response
+        return {"future_cri": clusters_with_CRI.reset_index().to_dict(orient="records")}
 
-#     return {"clusters": clusters_with_CRI.reset_index().to_dict(orient="records")}
+    except Exception as e:
+        logger.error(f"Error processing clusters: {e}")
 
 
 async def startup_event():
