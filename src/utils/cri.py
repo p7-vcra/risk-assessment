@@ -10,6 +10,7 @@ from sklearn.metrics.pairwise import haversine_distances
 
 # vessel_1_course and vessel_2_course are in radians
 
+EARTH_RADIUS_KM = 6371
 NMI_IN_KM = 1.852  # 1.852 is the length of a nautical mile in km
 EPS = 1e-9  # Epsilon value added to avoid division by zero
 
@@ -19,13 +20,15 @@ def calc_cpa(data):
     lat_delta = data["vessel_2_latitude"] - data["vessel_1_latitude"]
 
     vessel_1_xy = np.array(
-        [data["vessel_1_longitude"], data["vessel_1_latitude"]]
+        [data["vessel_1_latitude"], data["vessel_1_longitude"]]
     ).reshape(1, -1)
     vessel_2_xy = np.array(
-        [data["vessel_2_longitude"], data["vessel_2_latitude"]]
+        [data["vessel_2_latitude"], data["vessel_2_longitude"]]
     ).reshape(1, -1)
 
-    euclidian_dist = haversine_distances(vessel_1_xy, vessel_2_xy) / NMI_IN_KM
+    euclidian_dist = (
+        haversine_distances(vessel_1_xy, vessel_2_xy) * EARTH_RADIUS_KM / NMI_IN_KM
+    )[0][0]
 
     rel_speed_x, rel_speed_y, rel_speed_mag = calc_rel_speed(
         data["vessel_1_speed"],
@@ -41,7 +44,7 @@ def calc_cpa(data):
 
     CPA_angle = rel_movement_direction - azimuth_target_to_own - np.pi
     dcpa = euclidian_dist * np.sin(CPA_angle)
-    tcpa = euclidian_dist * np.cos(CPA_angle) / rel_speed_mag
+    tcpa = euclidian_dist * np.cos(CPA_angle) / (rel_speed_mag + EPS)
 
     return {
         "euclidian_dist": euclidian_dist,
@@ -74,7 +77,7 @@ def calc_cri(
     d1, d2 = calc_safety_domain(azimuth_target_to_own)
     u_dcpa = cpa_membership(np.abs(dcpa), d1, d2)
 
-    t1, t2 = calc_collision_eta(np.abs(dcpa), rel_speed_mag, d1, d2)
+    t1, t2 = calc_collision_eta(np.abs(dcpa), rel_speed_mag + EPS, d1, d2)
     u_tcpa = cpa_membership(np.abs(tcpa), t1, t2)
 
     crit_safe_dist, avoidance_measure_dist = calc_crit_dist(
@@ -130,7 +133,7 @@ def rel_bearing_membership(rel_bearing):
 
 
 def speed_ratio_membership(own_speed, target_speed, rel_course):
-    speed_ratio = target_speed / own_speed
+    speed_ratio = target_speed / (own_speed + EPS)
 
     denom = (
         speed_ratio * np.sqrt(speed_ratio**2 + 1 + 2 * speed_ratio * np.sin(rel_course))
@@ -184,16 +187,22 @@ def normalize_angle(angle):
     return angle % (2 * np.pi)
 
 
-def calc_rel_speed(own_speed, own_course, target_speed, target_course):
+def calc_rel_speed(vessel_1_speed, vessel_1_course, vessel_2_speed, vessel_2_course):
     # Course should be in radians. If we are larger than 2 * pi we assume we are in degrees
-    if own_course >= 2 * np.pi:
-        raise ValueError(f"Invalid own_course: {own_course}. It should be in radians.")
-    if target_course >= 2 * np.pi:
+    if vessel_1_course >= 2 * np.pi:
         raise ValueError(
-            f"Invalid target_course: {target_course}. It should be in radians."
+            f"Invalid vessel_1_course: {vessel_1_course}. It should be in radians."
+        )
+    if vessel_2_course >= 2 * np.pi:
+        raise ValueError(
+            f"Invalid vessel_2_course: {vessel_2_course}. It should be in radians."
         )
 
-    rel_speed_x = target_speed * np.sin(target_course) - own_speed * np.sin(own_course)
-    rel_speed_y = target_speed * np.cos(target_course) - own_speed * np.cos(own_course)
+    rel_speed_x = vessel_2_speed * np.sin(vessel_2_course) - vessel_1_speed * np.sin(
+        vessel_1_course
+    )
+    rel_speed_y = vessel_2_speed * np.cos(vessel_2_course) - vessel_1_speed * np.cos(
+        vessel_1_course
+    )
     rel_speed_mag = np.linalg.norm([rel_speed_x, rel_speed_y])
     return rel_speed_x, rel_speed_y, rel_speed_mag
